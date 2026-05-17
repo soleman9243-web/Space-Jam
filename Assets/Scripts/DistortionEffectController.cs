@@ -5,38 +5,92 @@ using UnityEngine.Rendering.Universal;
 public class DistortionEffectController : MonoBehaviour
 {
     [Header("References")]
-    [Tooltip("The Global Volume containing Post-Processing overrides.")]
+    [Tooltip("The Global Volume containing Post-Processing overrides. Akan dicari otomatis jika kosong.")]
     public Volume globalVolume;
     [Tooltip("Reference to the Phase Loop Manager to listen to state changes.")]
     public PhaseLoopManager phaseManager;
 
+    [Header("Audio Settings")]
+    [Tooltip("Sound effects to play when stability drops below 30%. Assign audio clips in Inspector.")]
+    public AudioClip[] glitchSounds;
+    private AudioSource audioSource;
+    private float audioTimer = 0f;
+    private float nextAudioInterval = 3f;
+
     [Header("Distortion Settings")]
-    public float maxLensDistortion = -0.5f;
+    public float maxLensDistortion = -0.6f;
     public float maxVignetteIntensity = 0.5f;
     public float maxChromaticAberration = 1f;
-    
-    [Tooltip("How fast the effects blend in and out.")]
-    public float transitionSpeed = 2f;
+    public float transitionSpeed = 10f; // Kecepatan lerp dinaikkan agar instan
+
+    [Header("Debug (Informasi Live Saat Play)")]
+    public float debugCurrentStability;
+    public float debugFinalDistortionWeight;
+    public bool isPostProcessingCameraActive;
+    public bool isVolumeActive;
 
     // Post-Processing overrides
     private LensDistortion lensDistortion;
     private Vignette vignette;
     private ChromaticAberration chromaticAberration;
 
-    // Value between 0 (no effect) and 1 (max effect)
-    private float targetDistortionWeight = 0f;
+    // Distortion calculation variables
+    private float baseDistortionWeight = 0f;
+    private float glitchDistortionWeight = 0f;
+    private float glitchTimer = 0f;
+    private float glitchHoldTimer = 0f;
+    private float nextGlitchInterval = 3f;
 
     private void Start()
     {
-        // Grab the overrides from the Volume Profile
-        if (globalVolume != null && globalVolume.profile != null)
+        // 1. Setup AudioSource
+        if (!TryGetComponent(out audioSource))
         {
-            globalVolume.profile.TryGet(out lensDistortion);
-            globalVolume.profile.TryGet(out vignette);
-            globalVolume.profile.TryGet(out chromaticAberration);
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+        audioSource.spatialBlend = 0f; // 2D sound
+
+        // 2. Pastikan Main Camera menyalakan Post-Processing
+        Camera mainCam = Camera.main;
+        if (mainCam != null)
+        {
+            if (mainCam.TryGetComponent(out UniversalAdditionalCameraData camData))
+            {
+                camData.renderPostProcessing = true;
+                isPostProcessingCameraActive = true;
+            }
         }
 
-        // Subscribe to phase change events (optional, for immediate spikes if desired)
+        // 3. Cari Global Volume otomatis jika belum diisi di Inspector
+        if (globalVolume == null)
+        {
+            globalVolume = FindObjectOfType<Volume>();
+        }
+
+        // 4. Pasang Override Post-Processing jika belum ada di Volume Profile
+        if (globalVolume != null && globalVolume.profile != null)
+        {
+            isVolumeActive = true;
+
+            if (!globalVolume.profile.TryGet(out lensDistortion))
+            {
+                lensDistortion = globalVolume.profile.Add<LensDistortion>();
+            }
+            if (!globalVolume.profile.TryGet(out vignette))
+            {
+                vignette = globalVolume.profile.Add<Vignette>();
+            }
+            if (!globalVolume.profile.TryGet(out chromaticAberration))
+            {
+                chromaticAberration = globalVolume.profile.Add<ChromaticAberration>();
+            }
+
+            // Aktifkan semua parameter
+            if (lensDistortion != null) lensDistortion.intensity.overrideState = true;
+            if (vignette != null) vignette.intensity.overrideState = true;
+            if (chromaticAberration != null) chromaticAberration.intensity.overrideState = true;
+        }
+
         if (phaseManager != null)
         {
             phaseManager.OnPhaseChanged.AddListener(HandlePhaseChanged);
@@ -45,68 +99,138 @@ public class DistortionEffectController : MonoBehaviour
 
     private void HandlePhaseChanged(GameState newState)
     {
-        // E.g. Spike distortion instantly on confusion
         if (newState == GameState.Confusion)
         {
-            // Forces instant distortion, which will then smooth out or hold depending on Update logic
-            // (Leaving this here as an example if you want immediate jumps on state change)
+            TriggerGlitch(0.8f, 0.5f);
         }
     }
 
     private void Update()
     {
+        float stability = GameManager.Instance != null ? GameManager.Instance.currentStability : 100f;
+        debugCurrentStability = stability;
+
         if (globalVolume == null) return;
 
-        CalculateTargetDistortion();
+        GameState currentState = phaseManager != null ? phaseManager.CurrentState : GameState.Awake;
+
+        HandleStabilityEffects(stability, currentState);
         ApplyDistortionEffects();
     }
 
-    private void CalculateTargetDistortion()
+    private void TriggerGlitch(float weight, float holdTime)
     {
-        float stability = GameManager.Instance != null ? GameManager.Instance.currentStability : 100f;
-        GameState currentState = phaseManager != null ? phaseManager.CurrentState : GameState.Awake;
+        glitchDistortionWeight = weight;
+        glitchHoldTimer = holdTime;
+    }
 
-        // Condition 1: High distortion when in Confusion Phase
-        if (currentState == GameState.Confusion)
+    private void HandleStabilityEffects(float stability, GameState currentState)
+    {
+        if (glitchHoldTimer > 0f)
         {
-            targetDistortionWeight = 1f;
+            glitchHoldTimer -= Time.deltaTime;
         }
-        // Condition 2: Dynamic distortion when stability drops below 30%
-        else if (stability < 30f)
+        else if (glitchDistortionWeight > 0f)
         {
-            // Maps 30% -> 0% stability to 0.0 -> 1.0 weight
-            targetDistortionWeight = 1f - (stability / 30f);
+            glitchDistortionWeight = Mathf.MoveTowards(glitchDistortionWeight, 0f, Time.deltaTime * 2f);
+        }
+
+        // 1. TIER 1: STABILITY <= 50% (Distorsi Keluar Jarang)
+        if (stability <= 50f && stability > 30f)
+        {
+            baseDistortionWeight = 0.15f;
+            glitchTimer += Time.deltaTime;
+            if (glitchTimer >= nextGlitchInterval)
+            {
+                glitchTimer = 0f;
+                nextGlitchInterval = Random.Range(2.5f, 5f);
+                TriggerGlitch(0.65f, 0.4f); // Glitch ditahan 0.4 detik agar sangat jelas terlihat
+            }
+        }
+        // 2. TIER 2: STABILITY <= 30% (Suara & Distorsi Sering)
+        else if (stability <= 30f && stability > 20f)
+        {
+            baseDistortionWeight = 0.4f;
+            glitchTimer += Time.deltaTime;
+            if (glitchTimer >= nextGlitchInterval)
+            {
+                glitchTimer = 0f;
+                nextGlitchInterval = Random.Range(1.5f, 3f);
+                TriggerGlitch(0.85f, 0.4f);
+            }
+
+            HandleAudioGlitch(2f, 4f);
+        }
+        // 3. TIER 3: STABILITY <= 20% (Distorsi Brutal & Suara Intens)
+        else if (stability <= 20f)
+        {
+            float brutalWave = Mathf.PingPong(Time.time * 5f, 0.5f);
+            baseDistortionWeight = 0.7f + brutalWave;
+
+            glitchTimer += Time.deltaTime;
+            if (glitchTimer >= 0.8f)
+            {
+                glitchTimer = 0f;
+                TriggerGlitch(1f, 0.25f);
+            }
+
+            HandleAudioGlitch(0.5f, 1.5f);
         }
         else
         {
-            targetDistortionWeight = 0f; // Stable
+            baseDistortionWeight = currentState == GameState.Confusion ? 0.6f : 0f;
+        }
+
+        debugFinalDistortionWeight = Mathf.Clamp01(baseDistortionWeight + glitchDistortionWeight);
+    }
+
+    private void HandleAudioGlitch(float minInterval, float maxInterval)
+    {
+        if (glitchSounds == null || glitchSounds.Length == 0 || audioSource == null) return;
+
+        audioTimer += Time.deltaTime;
+        if (audioTimer >= nextAudioInterval)
+        {
+            audioTimer = 0f;
+            nextAudioInterval = Random.Range(minInterval, maxInterval);
+
+            AudioClip clip = glitchSounds[Random.Range(0, glitchSounds.Length)];
+            if (clip != null)
+            {
+                audioSource.pitch = Random.Range(0.7f, 1.3f);
+                audioSource.PlayOneShot(clip, Random.Range(0.6f, 1f));
+            }
         }
     }
 
     private void ApplyDistortionEffects()
     {
-        // Smoothly lerp towards target intensity for all effects
+        float finalWeight = debugFinalDistortionWeight;
+
         if (lensDistortion != null)
         {
+            lensDistortion.intensity.overrideState = true;
             lensDistortion.intensity.value = Mathf.Lerp(
                 lensDistortion.intensity.value, 
-                targetDistortionWeight * maxLensDistortion, 
+                finalWeight * maxLensDistortion, 
                 Time.deltaTime * transitionSpeed);
         }
 
         if (vignette != null)
         {
+            vignette.intensity.overrideState = true;
             vignette.intensity.value = Mathf.Lerp(
                 vignette.intensity.value, 
-                targetDistortionWeight * maxVignetteIntensity, 
+                finalWeight * maxVignetteIntensity, 
                 Time.deltaTime * transitionSpeed);
         }
 
         if (chromaticAberration != null)
         {
+            chromaticAberration.intensity.overrideState = true;
             chromaticAberration.intensity.value = Mathf.Lerp(
                 chromaticAberration.intensity.value, 
-                targetDistortionWeight * maxChromaticAberration, 
+                finalWeight * maxChromaticAberration, 
                 Time.deltaTime * transitionSpeed);
         }
     }

@@ -34,32 +34,62 @@ public class PhaseLoopManager : MonoBehaviour
     {
         CurrentState = GameState.Awake;
         
-        // Ensure screen starts fully visible
-        if (screenFader != null) screenFader.alpha = 0f;
+        // 1. Cari otomatis Screen Fader jika belum dimasukkan di Inspector
+        if (screenFader == null)
+        {
+            GameObject faderObj = GameObject.Find("Screen Fader") ?? GameObject.Find("ScreenFader") ?? GameObject.Find("Fader") ?? GameObject.Find("Panel");
+            if (faderObj != null)
+            {
+                screenFader = faderObj.GetComponent<CanvasGroup>();
+            }
+        }
+
+        // 2. Pastikan layar mulai transparan dan tidak menghalangi klik
+        if (screenFader != null)
+        {
+            screenFader.alpha = 0f;
+            screenFader.blocksRaycasts = false;
+        }
+
+        // 3. Cek otomatis penyebab layar hitam di Game View
+        CheckCommonBlackScreenIssues();
 
         StartCoroutine(PhaseLoopRoutine());
+    }
+
+    private void CheckCommonBlackScreenIssues()
+    {
+        // Cek 1: Posisi Z Kamera
+        Camera mainCam = Camera.main;
+        if (mainCam != null && mainCam.transform.position.z >= 0f)
+        {
+            Debug.LogError("⚠️ [Penyebab Layar Hitam] Posisi Z Main Camera Anda berada di " + mainCam.transform.position.z + "! Ubah posisi Z kamera di Inspector menjadi -10 agar bisa melihat karakter 2D Anda.");
+        }
+
+        // Cek 2: Ketersediaan Cahaya 2D di URP
+        var lights = FindObjectsOfType<UnityEngine.Rendering.Universal.Light2D>();
+        if (lights == null || lights.Length == 0)
+        {
+            Debug.LogWarning("⚠️ [Penyebab Layar Hitam] Tidak ada objek cahaya (Light 2D) di scene Anda! Di project URP 2D, tanpa Global Light 2D, semua Sprite akan menjadi gelap/hitam di Game View.");
+        }
     }
 
     private IEnumerator PhaseLoopRoutine()
     {
         while (true)
         {
-            // Trigger phase change event for the active phase
             OnPhaseChanged?.Invoke(CurrentState);
 
-            // Wait for current phase to finish
             yield return new WaitForSeconds(GetDurationForState(CurrentState));
 
-            // Fade out (Screen becomes black)
+            // Fade out ke layar hitam
             yield return StartCoroutine(FadeScreen(1f));
 
-            // Switch to the next state logically
             TransitionToNextState();
 
-            // Trigger phase change event so systems know we're technically in the new phase
             OnPhaseChanged?.Invoke(CurrentState);
 
-            // Fade in (Screen becomes visible again)
+            // Fade in kembali ke game
             yield return StartCoroutine(FadeScreen(0f));
         }
     }
@@ -95,6 +125,8 @@ public class PhaseLoopManager : MonoBehaviour
     {
         if (screenFader == null) yield break;
 
+        if (targetAlpha > 0f) screenFader.blocksRaycasts = true;
+
         float startAlpha = screenFader.alpha;
         float time = 0;
 
@@ -105,7 +137,7 @@ public class PhaseLoopManager : MonoBehaviour
             yield return null;
         }
 
-        // Ensure it exactly hits the target
         screenFader.alpha = targetAlpha;
+        if (targetAlpha == 0f) screenFader.blocksRaycasts = false;
     }
 }

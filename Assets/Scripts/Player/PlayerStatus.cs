@@ -81,8 +81,13 @@ public class PlayerStatus : MonoBehaviour
         Debug.Log("Player kehilangan stability: " + amount);
     }
 
-    void Die()
+    public void Die()
     {
+        if (isDead)
+        {
+            return;
+        }
+
         isDead = true;
 
         playerMovement.enabled = false;

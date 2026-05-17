@@ -22,6 +22,8 @@ public class DistortionEffectController : MonoBehaviour
     public float maxVignetteIntensity = 0.5f;
     public float maxChromaticAberration = 1f;
     public float transitionSpeed = 10f; // Kecepatan lerp dinaikkan agar instan
+    [Tooltip("Jika dicentang, UI Canvas diubah ke Camera Mode agar ikut terdistorsi. Jika UI jadi terlalu zoom, matikan centang ini.")]
+    public bool distortUICanvases = false;
 
     [Header("Debug (Informasi Live Saat Play)")]
     public float debugCurrentStability;
@@ -61,7 +63,7 @@ public class DistortionEffectController : MonoBehaviour
             }
         }
 
-        // 3. Cari Global Volume otomatis jika belum diisi di Inspector
+        // 4. Cari Global Volume otomatis jika belum diisi di Inspector
         if (globalVolume == null)
         {
             globalVolume = FindObjectOfType<Volume>();
@@ -107,7 +109,9 @@ public class DistortionEffectController : MonoBehaviour
 
     private void Update()
     {
-        float stability = GameManager.Instance != null ? GameManager.Instance.currentStability : 100f;
+        // Prioritaskan membaca langsung dari PlayerStatus bar yang ada di UI, dengan fallback ke GameManager
+        float stability = PlayerStatus.Instance != null ? PlayerStatus.Instance.stability : 
+                         (GameManager.Instance != null ? GameManager.Instance.currentStability : 100f);
         debugCurrentStability = stability;
 
         if (globalVolume == null) return;

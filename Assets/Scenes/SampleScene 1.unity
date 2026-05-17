@@ -531,6 +531,18 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6746819279517006855, guid: e3542d84c99bd5a4780dac4f1789f337, type: 3}
+      propertyPath: maxLensDistortion
+      value: 0.57
+      objectReference: {fileID: 0}
+    - target: {fileID: 6746819279517006855, guid: e3542d84c99bd5a4780dac4f1789f337, type: 3}
+      propertyPath: maxVignetteIntensity
+      value: 1.48
+      objectReference: {fileID: 0}
+    - target: {fileID: 6746819279517006855, guid: e3542d84c99bd5a4780dac4f1789f337, type: 3}
+      propertyPath: maxChromaticAberration
+      value: 4.03
+      objectReference: {fileID: 0}
+    - target: {fileID: 6746819279517006855, guid: e3542d84c99bd5a4780dac4f1789f337, type: 3}
       propertyPath: isPostProcessingCameraActive
       value: 1
       objectReference: {fileID: 0}
@@ -897,8 +909,8 @@ SceneRoots:
   m_Roots:
   - {fileID: 519420032}
   - {fileID: 619394802}
-  - {fileID: 2205063007043966585}
   - {fileID: 2334602078992163827}
+  - {fileID: 2205063007043966585}
   - {fileID: 1956669965}
   - {fileID: 729188903195972863}
   - {fileID: 376857193}

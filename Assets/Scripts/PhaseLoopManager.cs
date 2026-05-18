@@ -142,12 +142,43 @@ public class PhaseLoopManager : MonoBehaviour
         // Pindah posisi player jika ada (fase Dream)
         if (targetState == GameState.Dream && wakeUpPosition != null)
         {
+<<<<<<< Updated upstream
             GameObject player = GameObject.FindGameObjectWithTag("Player");
             if (player != null)
             {
                 player.transform.position = wakeUpPosition.position;
                 player.transform.rotation = wakeUpPosition.rotation;
             }
+=======
+            // Pastikan SceneManagement di-import (using UnityEngine.SceneManagement)
+            UnityEngine.SceneManagement.SceneManager.LoadScene(phase3SceneName);
+            yield break; // Stop coroutine di sini, scene akan berganti
+        }
+
+        // 4. Khusus jika masuk fase Dream, kembalikan posisi player dan nyalakan movement
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            if (wakeUpPosition != null)
+            {
+                player.transform.position = wakeUpPosition.position;
+            }
+
+            // Kembalikan rotasi normal saat bangun
+            player.transform.rotation = Quaternion.identity;
+
+            var collider = player.GetComponent<Collider2D>();
+            if (collider != null)
+            {
+                collider.enabled = true;
+            }
+
+            var movement = player.GetComponent<PlayerMovement>();
+            if (movement != null)
+            {
+                movement.enabled = true;
+            }
+>>>>>>> Stashed changes
         }
     }
 

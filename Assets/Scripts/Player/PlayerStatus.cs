@@ -81,6 +81,13 @@ public class PlayerStatus : MonoBehaviour
         Debug.Log("Player kehilangan stability: " + amount);
     }
 
+    public void IncreaseStability(float amount)
+    {
+
+        stability += amount;
+
+        Debug.Log("Player ketambahan stability: " + amount);
+    }
     public void Die()
     {
         if (isDead)

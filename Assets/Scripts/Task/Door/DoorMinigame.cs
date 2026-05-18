@@ -7,6 +7,9 @@ public class DoorMinigame : MonoBehaviour
     [Header("Doors")]
     [SerializeField] private DoorChoice[] doors;
 
+    [Header("Door Parent")]
+    [SerializeField] private GameObject doorParent;
+
     [Header("Difficulty")]
     [Range(1, 5)]
     [SerializeField] private int difficulty = 1;
@@ -15,8 +18,26 @@ public class DoorMinigame : MonoBehaviour
 
     private bool finished;
 
-    private void Start()
+    private void Awake()
     {
+        if (doorParent != null)
+        {
+            doorParent.SetActive(false);
+        }
+    }
+
+    private void OnEnable()
+    {
+        SetupDoors();
+    }
+
+    public void OpenDoors()
+    {
+        if (doorParent != null)
+        {
+            doorParent.SetActive(true);
+        }
+
         SetupDoors();
     }
 

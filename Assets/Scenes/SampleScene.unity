@@ -555,6 +555,40 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   spawner: {fileID: 2077363019}
   difficultyLevel: 1
+--- !u!1 &321505100
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 321505101}
+  m_Layer: 0
+  m_Name: Doors
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &321505101
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 321505100}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 4, y: 3.6, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 3618493124173164341}
+  - {fileID: 859236277}
+  - {fileID: 982773332}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &400254217
 GameObject:
   m_ObjectHideFlags: 0
@@ -1467,12 +1501,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 859236272}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3.6, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -4, y: 0, z: 0}
   m_LocalScale: {x: 0.6, y: 1, z: 0.7}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 321505101}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &859236278
 MonoBehaviour:
@@ -1759,12 +1793,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 982773327}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 4, y: 3.6, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.6, y: 1, z: 0.7}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 321505101}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &982773333
 MonoBehaviour:
@@ -2437,10 +2471,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db2df889793a7bb429e1d674b5e03499, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  roomRoot: {fileID: 1003638756}
-  parkourRoot: {fileID: 0}
-  fadeDuration: 1
-  roomRenderers: []
 --- !u!1 &1431780954
 GameObject:
   m_ObjectHideFlags: 0
@@ -3391,7 +3421,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1895986609}
   m_Layer: 5
-  m_Name: Pause
+  m_Name: GameOver
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3692,6 +3722,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2037516126}
   - component: {fileID: 2037516127}
+  - component: {fileID: 2037516128}
   m_Layer: 0
   m_Name: DoorController
   m_TagString: Untagged
@@ -3730,7 +3761,21 @@ MonoBehaviour:
   - {fileID: 8126353230142554181}
   - {fileID: 859236278}
   - {fileID: 982773333}
+  doorParent: {fileID: 321505100}
   difficulty: 5
+--- !u!114 &2037516128
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2037516125}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4f59b6f116918d4b8da107ffa9f56db, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  doorMinigame: {fileID: 2037516127}
 --- !u!1 &2077363018
 GameObject:
   m_ObjectHideFlags: 0
@@ -3911,12 +3956,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 815843485833193326}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4, y: 3.6, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -8, y: 0, z: 0}
   m_LocalScale: {x: 0.6, y: 1, z: 0.7}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 321505101}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &4721982127260874402
 MonoBehaviour:
@@ -4015,6 +4060,4 @@ SceneRoots:
   - {fileID: 1982668511}
   - {fileID: 428172556}
   - {fileID: 983550638}
-  - {fileID: 3618493124173164341}
-  - {fileID: 859236277}
-  - {fileID: 982773332}
+  - {fileID: 321505101}

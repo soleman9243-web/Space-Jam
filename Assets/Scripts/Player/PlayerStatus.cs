@@ -63,10 +63,10 @@ public class PlayerStatus : MonoBehaviour
             easeStabilitySlider.value = Mathf.Lerp(easeStabilitySlider.value,stability,lerpSpeed);
         }
 
-        if (stability <= 0 && !isDead)
+        /*if (stability <= 0 && !isDead)
         {
             Die();
-        }
+        }*/
     }
 
     public void ReduceStability(float amount)

@@ -1,9 +1,11 @@
+using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
+    public event Action<bool> OnMovementChanged;
+
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private Animator anim;
     [SerializeField] private SpriteRenderer spriteRenderer;
@@ -12,6 +14,10 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector2 moveInput;
     private Vector2 lastDirection;
+
+    private bool lastIsMoving;
+
+    public bool IsMoving { get; private set; }
 
     private void Awake()
     {
@@ -28,6 +34,14 @@ public class PlayerMovement : MonoBehaviour
         if (moveInput != Vector2.zero)
         {
             lastDirection = moveInput;
+        }
+
+        IsMoving = moveInput.sqrMagnitude > 0.01f;
+
+        if (IsMoving != lastIsMoving)
+        {
+            lastIsMoving = IsMoving;
+            OnMovementChanged?.Invoke(IsMoving);
         }
 
         HandleFlip();

@@ -34,11 +34,16 @@ public class PhaseLoopManager : MonoBehaviour
     [Header("Events")]
     public UnityEvent<GameState> OnPhaseChanged;
 
+    [Header("Debug (Informasi Live Saat Play)")]
+    [Tooltip("Cek di sini untuk melihat fase game sudah berganti atau belum.")]
+    public GameState inspectorCurrentState;
+
     public GameState CurrentState { get; private set; }
 
     private void Start()
     {
         CurrentState = GameState.Awake;
+        inspectorCurrentState = CurrentState;
         
         // 1. Cari otomatis Screen Fader jika belum dimasukkan di Inspector
         if (screenFader == null)
@@ -68,6 +73,9 @@ public class PhaseLoopManager : MonoBehaviour
 
     private void Update()
     {
+        // Update terus tulisan di Inspector agar kamu gampang ngeceknya
+        inspectorCurrentState = CurrentState;
+
         // Pengecekan khusus untuk pindah ke Fase 3 (Confusion) saat di Fase 2 (Dream)
         if (CurrentState == GameState.Dream && !isTransitioning)
         {
@@ -114,6 +122,7 @@ public class PhaseLoopManager : MonoBehaviour
             yield return StartCoroutine(FadeScreen(1f));
 
             TransitionToNextState();
+            inspectorCurrentState = CurrentState;
 
             OnPhaseChanged?.Invoke(CurrentState);
 
@@ -122,57 +131,24 @@ public class PhaseLoopManager : MonoBehaviour
         }
     }
 
-    // Fungsi baru untuk dipanggil dari objek seperti Kasur (BedInteract)
-    public void StartManualTransition(GameState targetState, float blackScreenDuration = 2f, Transform wakeUpPosition = null)
+    // Fungsi transisi instan yang dipanggil saat klik kasur
+    public void StartManualTransition(GameState targetState, Transform wakeUpPosition = null)
     {
-        if (isTransitioning) return;
-        StartCoroutine(ManualTransitionRoutine(targetState, blackScreenDuration, wakeUpPosition));
-    }
-
-    private IEnumerator ManualTransitionRoutine(GameState targetState, float blackScreenDuration, Transform wakeUpPosition)
-    {
-        isTransitioning = true;
-
-        // 1. Fade ke layar hitam
-        yield return StartCoroutine(FadeScreen(1f));
-
-        // Jeda waktu saat layar hitam (simulasi sedang tertidur)
-        yield return new WaitForSeconds(blackScreenDuration);
-
-        // 2. Ganti status
+        // Langsung ganti status
         CurrentState = targetState;
+        inspectorCurrentState = CurrentState; // Update Inspector
         OnPhaseChanged?.Invoke(CurrentState);
 
-        // 3. Pengecekan jika targetnya adalah Confusion (Fase 3), pindah scene
-        if (targetState == GameState.Confusion)
+        // Pindah posisi player jika ada (fase Dream)
+        if (targetState == GameState.Dream && wakeUpPosition != null)
         {
-            // Pastikan SceneManagement di-import (using UnityEngine.SceneManagement)
-            UnityEngine.SceneManagement.SceneManager.LoadScene(phase3SceneName);
-            yield break; // Stop coroutine di sini, scene akan berganti
-        }
-
-        // 4. Khusus jika masuk fase Dream, kembalikan posisi player dan nyalakan movement
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null && targetState == GameState.Dream)
-        {
-            if (wakeUpPosition != null)
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
             {
                 player.transform.position = wakeUpPosition.position;
-                player.transform.rotation = wakeUpPosition.rotation; // Ikuti rotasi titik bangun
+                player.transform.rotation = wakeUpPosition.rotation;
             }
-            else
-            {
-                player.transform.rotation = Quaternion.identity; // Kembalikan rotasi jadi tegak normal
-            }
-            
-            var movement = player.GetComponent<PlayerMovement>();
-            if (movement != null) movement.enabled = true;
         }
-
-        // 5. Fade kembali (layar jadi terang, player bangun di fase Dream)
-        yield return StartCoroutine(FadeScreen(0f));
-        
-        isTransitioning = false;
     }
 
     private float GetDurationForState(GameState state)

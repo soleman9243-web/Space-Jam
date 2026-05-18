@@ -182,7 +182,19 @@ public class DistortionEffectController : MonoBehaviour
         }
         else
         {
-            baseDistortionWeight = currentState == GameState.Confusion ? 0.6f : 0f;
+            if (currentState == GameState.Confusion)
+            {
+                baseDistortionWeight = 0.6f;
+            }
+            else if (currentState == GameState.Dream)
+            {
+                // Memberikan efek vignette dan distorsi sangat ringan untuk nuansa "Mimpi"
+                baseDistortionWeight = 0.15f; 
+            }
+            else
+            {
+                baseDistortionWeight = 0f;
+            }
         }
 
         debugFinalDistortionWeight = Mathf.Clamp01(baseDistortionWeight + glitchDistortionWeight);

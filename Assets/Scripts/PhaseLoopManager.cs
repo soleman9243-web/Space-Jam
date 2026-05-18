@@ -11,12 +11,16 @@ public enum GameState
 
 public class PhaseLoopManager : MonoBehaviour
 {
-    [Header("Phase Durations (Seconds)")]
-    [Tooltip("Duration of the Awake phase in seconds.")]
+    [Header("Phase Progression Settings")]
+    [Tooltip("Jika true, fase akan berganti otomatis berdasarkan durasi. Jika false, perpindahan fase dipicu manual (misal: tidur di kasur).")]
+    public bool autoLoopPhases = false;
+    
+    [Tooltip("Nama Scene untuk fase 3 (Confusion). Pastikan sudah dimasukkan di Build Settings.")]
+    public string phase3SceneName = "ConfusionScene";
+    
+    [Header("Phase Durations (Seconds) - Only if Auto Loop is True")]
     public float awakeDuration = 10f;
-    [Tooltip("Duration of the Dream phase in seconds.")]
     public float dreamDuration = 20f;
-    [Tooltip("Duration of the Confusion phase in seconds.")]
     public float confusionDuration = 15f;
 
     [Header("UI & Visuals")]
@@ -24,6 +28,8 @@ public class PhaseLoopManager : MonoBehaviour
     public CanvasGroup screenFader;
     [Tooltip("How long the fade to black and fade from black takes.")]
     public float fadeDuration = 1f;
+    
+    private bool isTransitioning = false;
 
     [Header("Events")]
     public UnityEvent<GameState> OnPhaseChanged;
@@ -54,7 +60,29 @@ public class PhaseLoopManager : MonoBehaviour
         // 3. Cek otomatis penyebab layar hitam di Game View
         CheckCommonBlackScreenIssues();
 
-        StartCoroutine(PhaseLoopRoutine());
+        if (autoLoopPhases)
+        {
+            StartCoroutine(PhaseLoopRoutine());
+        }
+    }
+
+    private void Update()
+    {
+        // Pengecekan khusus untuk pindah ke Fase 3 (Confusion) saat di Fase 2 (Dream)
+        if (CurrentState == GameState.Dream && !isTransitioning)
+        {
+            float currentStability = GameManager.Instance != null ? GameManager.Instance.currentStability : 100f;
+            if (PlayerStatus.Instance != null)
+            {
+                currentStability = PlayerStatus.Instance.stability;
+            }
+
+            if (currentStability <= 30f)
+            {
+                // Stability drop di bawah 30, paksa masuk fase 3 (pindah scene)
+                StartManualTransition(GameState.Confusion);
+            }
+        }
     }
 
     private void CheckCommonBlackScreenIssues()
@@ -76,7 +104,7 @@ public class PhaseLoopManager : MonoBehaviour
 
     private IEnumerator PhaseLoopRoutine()
     {
-        while (true)
+        while (autoLoopPhases)
         {
             OnPhaseChanged?.Invoke(CurrentState);
 
@@ -92,6 +120,59 @@ public class PhaseLoopManager : MonoBehaviour
             // Fade in kembali ke game
             yield return StartCoroutine(FadeScreen(0f));
         }
+    }
+
+    // Fungsi baru untuk dipanggil dari objek seperti Kasur (BedInteract)
+    public void StartManualTransition(GameState targetState, float blackScreenDuration = 2f, Transform wakeUpPosition = null)
+    {
+        if (isTransitioning) return;
+        StartCoroutine(ManualTransitionRoutine(targetState, blackScreenDuration, wakeUpPosition));
+    }
+
+    private IEnumerator ManualTransitionRoutine(GameState targetState, float blackScreenDuration, Transform wakeUpPosition)
+    {
+        isTransitioning = true;
+
+        // 1. Fade ke layar hitam
+        yield return StartCoroutine(FadeScreen(1f));
+
+        // Jeda waktu saat layar hitam (simulasi sedang tertidur)
+        yield return new WaitForSeconds(blackScreenDuration);
+
+        // 2. Ganti status
+        CurrentState = targetState;
+        OnPhaseChanged?.Invoke(CurrentState);
+
+        // 3. Pengecekan jika targetnya adalah Confusion (Fase 3), pindah scene
+        if (targetState == GameState.Confusion)
+        {
+            // Pastikan SceneManagement di-import (using UnityEngine.SceneManagement)
+            UnityEngine.SceneManagement.SceneManager.LoadScene(phase3SceneName);
+            yield break; // Stop coroutine di sini, scene akan berganti
+        }
+
+        // 4. Khusus jika masuk fase Dream, kembalikan posisi player dan nyalakan movement
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null && targetState == GameState.Dream)
+        {
+            if (wakeUpPosition != null)
+            {
+                player.transform.position = wakeUpPosition.position;
+                player.transform.rotation = wakeUpPosition.rotation; // Ikuti rotasi titik bangun
+            }
+            else
+            {
+                player.transform.rotation = Quaternion.identity; // Kembalikan rotasi jadi tegak normal
+            }
+            
+            var movement = player.GetComponent<PlayerMovement>();
+            if (movement != null) movement.enabled = true;
+        }
+
+        // 5. Fade kembali (layar jadi terang, player bangun di fase Dream)
+        yield return StartCoroutine(FadeScreen(0f));
+        
+        isTransitioning = false;
     }
 
     private float GetDurationForState(GameState state)

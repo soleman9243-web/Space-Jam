@@ -211,7 +211,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   player: {fileID: 979234492}
-  warningTrackPrefab: {fileID: 5780230214708302336, guid: 8ac1490e8a9b1da4a8c5cae28a6f0050, type: 3}
+  warningTrackPrefab: {fileID: 5780230214708302336, guid: bdc1f5180045e4241b8fd3f99bcc7e90, type: 3}
   dashEnemyPrefab: {fileID: 286757857897202514, guid: 441e96933a3eb8445b04dd616942dace, type: 3}
   trackCount: 3
   dashSpeed: 20
@@ -420,7 +420,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 5
+  orthographic size: 11.67
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2

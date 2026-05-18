@@ -1155,7 +1155,7 @@ AnimatorStateTransition:
     m_ConditionEvent: isMoving
     m_EventTreshold: 0
   - m_ConditionMode: 4
-    m_ConditionEvent: MoveY
+    m_ConditionEvent: MoveX
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: -4232520897088246303}

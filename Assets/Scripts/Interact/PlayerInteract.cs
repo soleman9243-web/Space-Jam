@@ -13,6 +13,7 @@ public class PlayerInteract2D : MonoBehaviour
 
     private InteractObject2D currentInteractable;
 
+    public bool canInteract = true;
     private void Start()
     {
         if (interactBubble != null)
@@ -23,6 +24,11 @@ public class PlayerInteract2D : MonoBehaviour
 
     private void Update()
     {
+        if (!canInteract)
+        {
+            return;
+        }
+
         if (currentInteractable == null)
         {
             return;

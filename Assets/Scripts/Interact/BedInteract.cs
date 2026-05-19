@@ -4,82 +4,82 @@ using UnityEngine;
 public class BedInteract : MonoBehaviour
 {
     [Header("References")]
-    [Tooltip("Posisi di mana karakter akan terbangun (misal: di sebelah kasur).")]
     public Transform wakeUpPosition;
-    [Tooltip("Referensi ke PhaseLoopManager. Akan dicari otomatis jika kosong.")]
     public PhaseLoopManager phaseManager;
+    public Transform sleepPosition;
+
+    public float sleepDuration = 2f;
+
+    public bool canSleep = false;
 
     private bool hasSlept = false;
 
-    // Fungsi ini bisa dipanggil dari UnityEvent di InteractObject2D
     public void SleepOnBed()
     {
-        if (hasSlept) return; // Mencegah spam klik yang bikin nge-bug
-        
+        Debug.Log("BED CLICKED");
+
+        if (!canSleep)
+        {
+            Debug.Log("BLOCKED canSleep = false");
+            return;
+        }
+
+        if (hasSlept)
+        {
+            Debug.Log("BLOCKED hasSlept = true");
+            return;
+        }
+        if (!canSleep || hasSlept)
+        {
+            return;
+        }
+
         hasSlept = true;
 
-<<<<<<< Updated upstream
-        // Minta PhaseLoopManager untuk pindah ke fase Dream SECARA INSTAN
-        if (phaseManager == null) phaseManager = FindObjectOfType<PhaseLoopManager>();
-        if (phaseManager != null)
-        {
-            phaseManager.StartManualTransition(GameState.Dream, wakeUpPosition);
-        }
-        else
-        {
-            Debug.LogError("PhaseLoopManager tidak ditemukan di scene!");
-=======
-        // hasSlept = true;
+        GameObject player =
+            GameObject.FindGameObjectWithTag("Player");
 
-        // 1. Pindahkan posisi dan rotasi player agar tiduran mengikuti arah kasur
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
         {
-            player.transform.position = sleepPosition != null ? sleepPosition.position : transform.position;
-            
-            // Samakan rotasi karakter dengan rotasi titik tidur (sleepPosition)
-            player.transform.rotation = sleepPosition != null ? sleepPosition.rotation : transform.rotation;
+            player.transform.position =
+                sleepPosition != null ? sleepPosition.position : transform.position;
 
-            // Nonaktifkan movement
+            player.transform.rotation =
+                sleepPosition != null ? sleepPosition.rotation : transform.rotation;
+
             var movement = player.GetComponent<PlayerMovement>();
-            if (movement != null)
-            {
-                movement.enabled = false;
-            }
+            if (movement != null) movement.enabled = false;
 
-            // Stop velocity
             var rb = player.GetComponent<Rigidbody2D>();
-            if (rb != null)
-            {
-                rb.velocity = Vector2.zero;
-            }
+            if (rb != null) rb.velocity = Vector2.zero;
 
-            // Matikan collider sementara supaya tidak mental dari kasur
             var collider = player.GetComponent<Collider2D>();
-            if (collider != null)
-            {
-                collider.enabled = false;
-            }
+            if (collider != null) collider.enabled = false;
         }
 
-        // 2. Tentukan target fase
         if (phaseManager == null)
         {
             phaseManager = FindObjectOfType<PhaseLoopManager>();
         }
 
-        if (phaseManager != null)
+        if (phaseManager == null)
         {
-            GameState targetState = GameState.Dream;
-
-            // Jika sekarang sudah di Dream, balik ke Awake
-            if (phaseManager.CurrentState == GameState.Dream)
-            {
-                targetState = GameState.Awake;
-            }
-
-            phaseManager.StartManualTransition(targetState, sleepDuration, wakeUpPosition);
->>>>>>> Stashed changes
+            Debug.LogError("PhaseLoopManager tidak ditemukan!");
+            return;
         }
+
+        StartCoroutine(SleepTransition());
+    }
+
+    private IEnumerator SleepTransition()
+    {
+        yield return new WaitForSeconds(sleepDuration);
+
+        // FIX UTAMA: hanya arahkan ke Dream, jangan toggle
+        phaseManager.StartManualTransition(GameState.Dream, wakeUpPosition);
+
+        yield return new WaitForSeconds(1f);
+
+        hasSlept = false;
     }
 }

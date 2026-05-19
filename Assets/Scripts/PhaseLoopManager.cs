@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.SceneManagement;
 
 public enum GameState
 {
@@ -11,59 +12,40 @@ public enum GameState
 
 public class PhaseLoopManager : MonoBehaviour
 {
-    [Header("Phase Progression Settings")]
-    [Tooltip("Jika true, fase akan berganti otomatis berdasarkan durasi. Jika false, perpindahan fase dipicu manual (misal: tidur di kasur).")]
     public bool autoLoopPhases = false;
-    
-    [Tooltip("Nama Scene untuk fase 3 (Confusion). Pastikan sudah dimasukkan di Build Settings.")]
+
+    public int currentLoop = 1;
+
     public string phase3SceneName = "ConfusionScene";
-    
-    [Header("Phase Durations (Seconds) - Only if Auto Loop is True")]
+
     public float awakeDuration = 10f;
     public float dreamDuration = 20f;
     public float confusionDuration = 15f;
 
-    [Header("UI & Visuals")]
-    [Tooltip("CanvasGroup used for fading the screen in and out. Attach a full-screen black panel with a CanvasGroup here.")]
     public CanvasGroup screenFader;
-    [Tooltip("How long the fade to black and fade from black takes.")]
     public float fadeDuration = 1f;
-    
-    private bool isTransitioning = false;
 
-    [Header("Events")]
     public UnityEvent<GameState> OnPhaseChanged;
 
-    [Header("Debug (Informasi Live Saat Play)")]
-    [Tooltip("Cek di sini untuk melihat fase game sudah berganti atau belum.")]
     public GameState inspectorCurrentState;
 
     public GameState CurrentState { get; private set; }
 
+    public static GameState GlobalState = GameState.Awake;
+
+    private void Awake()
+    {
+        DontDestroyOnLoad(gameObject);
+    }
+
     private void Start()
     {
-        CurrentState = GameState.Awake;
+        CurrentState = GlobalState;
         inspectorCurrentState = CurrentState;
-        
-        // 1. Cari otomatis Screen Fader jika belum dimasukkan di Inspector
-        if (screenFader == null)
-        {
-            GameObject faderObj = GameObject.Find("Screen Fader") ?? GameObject.Find("ScreenFader") ?? GameObject.Find("Fader") ?? GameObject.Find("Panel");
-            if (faderObj != null)
-            {
-                screenFader = faderObj.GetComponent<CanvasGroup>();
-            }
-        }
 
-        // 2. Pastikan layar mulai transparan dan tidak menghalangi klik
-        if (screenFader != null)
-        {
-            screenFader.alpha = 0f;
-            screenFader.blocksRaycasts = false;
-        }
+        Debug.Log("START STATE = " + CurrentState);
 
-        // 3. Cek otomatis penyebab layar hitam di Game View
-        CheckCommonBlackScreenIssues();
+        OnPhaseChanged?.Invoke(CurrentState);
 
         if (autoLoopPhases)
         {
@@ -73,40 +55,67 @@ public class PhaseLoopManager : MonoBehaviour
 
     private void Update()
     {
-        // Update terus tulisan di Inspector agar kamu gampang ngeceknya
         inspectorCurrentState = CurrentState;
 
-        // Pengecekan khusus untuk pindah ke Fase 3 (Confusion) saat di Fase 2 (Dream)
-        if (CurrentState == GameState.Dream && !isTransitioning)
-        {
-            float currentStability = GameManager.Instance != null ? GameManager.Instance.currentStability : 100f;
-            if (PlayerStatus.Instance != null)
-            {
-                currentStability = PlayerStatus.Instance.stability;
-            }
+        // DEBUG REAL STATE
+        Debug.Log("STATE NOW = " + CurrentState);
 
-            if (currentStability <= 30f)
+        if (CurrentState == GameState.Dream)
+        {
+            float stability = PlayerStatus.Instance != null
+                ? PlayerStatus.Instance.stability
+                : 100f;
+
+            if (stability <= 30f)
             {
-                // Stability drop di bawah 30, paksa masuk fase 3 (pindah scene)
                 StartManualTransition(GameState.Confusion);
             }
         }
     }
 
-    private void CheckCommonBlackScreenIssues()
+    // =======================
+    // MAIN TRANSITION (FIXED)
+    // =======================
+    public void StartManualTransition(GameState targetState, Transform wakeUpPosition = null)
     {
-        // Cek 1: Posisi Z Kamera
-        Camera mainCam = Camera.main;
-        if (mainCam != null && mainCam.transform.position.z >= 0f)
+        Debug.Log(">>> TRANSITION REQUEST: " + targetState);
+
+        GlobalState = targetState;
+        CurrentState = targetState;
+        inspectorCurrentState = targetState;
+
+        Debug.Log(">>> STATE SET TO: " + CurrentState);
+
+        OnPhaseChanged?.Invoke(CurrentState);
+
+        if (targetState == GameState.Confusion)
         {
-            Debug.LogError("⚠️ [Penyebab Layar Hitam] Posisi Z Main Camera Anda berada di " + mainCam.transform.position.z + "! Ubah posisi Z kamera di Inspector menjadi -10 agar bisa melihat karakter 2D Anda.");
+            Debug.Log("LOADING SCENE: " + phase3SceneName);
+            SceneManager.LoadScene(phase3SceneName);
+            return;
         }
 
-        // Cek 2: Ketersediaan Cahaya 2D di URP
-        var lights = FindObjectsOfType<UnityEngine.Rendering.Universal.Light2D>();
-        if (lights == null || lights.Length == 0)
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+
+        if (player != null)
         {
-            Debug.LogWarning("⚠️ [Penyebab Layar Hitam] Tidak ada objek cahaya (Light 2D) di scene Anda! Di project URP 2D, tanpa Global Light 2D, semua Sprite akan menjadi gelap/hitam di Game View.");
+            Debug.Log("PLAYER FOUND - TELEPORT");
+
+            if (wakeUpPosition != null)
+            {
+                player.transform.position = wakeUpPosition.position;
+                player.transform.rotation = wakeUpPosition.rotation;
+            }
+
+            PlayerMovement move = player.GetComponent<PlayerMovement>();
+            if (move != null) move.enabled = true;
+
+            Collider2D col = player.GetComponent<Collider2D>();
+            if (col != null) col.enabled = true;
+        }
+        else
+        {
+            Debug.LogWarning("PLAYER NOT FOUND");
         }
     }
 
@@ -114,75 +123,17 @@ public class PhaseLoopManager : MonoBehaviour
     {
         while (autoLoopPhases)
         {
-            OnPhaseChanged?.Invoke(CurrentState);
+            yield return new WaitForSeconds(GetDuration(CurrentState));
 
-            yield return new WaitForSeconds(GetDurationForState(CurrentState));
+            TransitionToNext();
 
-            // Fade out ke layar hitam
-            yield return StartCoroutine(FadeScreen(1f));
-
-            TransitionToNextState();
-            inspectorCurrentState = CurrentState;
+            GlobalState = CurrentState;
 
             OnPhaseChanged?.Invoke(CurrentState);
-
-            // Fade in kembali ke game
-            yield return StartCoroutine(FadeScreen(0f));
         }
     }
 
-    // Fungsi transisi instan yang dipanggil saat klik kasur
-    public void StartManualTransition(GameState targetState, Transform wakeUpPosition = null)
-    {
-        // Langsung ganti status
-        CurrentState = targetState;
-        inspectorCurrentState = CurrentState; // Update Inspector
-        OnPhaseChanged?.Invoke(CurrentState);
-
-        // Pindah posisi player jika ada (fase Dream)
-        if (targetState == GameState.Dream && wakeUpPosition != null)
-        {
-<<<<<<< Updated upstream
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null)
-            {
-                player.transform.position = wakeUpPosition.position;
-                player.transform.rotation = wakeUpPosition.rotation;
-            }
-=======
-            // Pastikan SceneManagement di-import (using UnityEngine.SceneManagement)
-            UnityEngine.SceneManagement.SceneManager.LoadScene(phase3SceneName);
-            yield break; // Stop coroutine di sini, scene akan berganti
-        }
-
-        // 4. Khusus jika masuk fase Dream, kembalikan posisi player dan nyalakan movement
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
-        {
-            if (wakeUpPosition != null)
-            {
-                player.transform.position = wakeUpPosition.position;
-            }
-
-            // Kembalikan rotasi normal saat bangun
-            player.transform.rotation = Quaternion.identity;
-
-            var collider = player.GetComponent<Collider2D>();
-            if (collider != null)
-            {
-                collider.enabled = true;
-            }
-
-            var movement = player.GetComponent<PlayerMovement>();
-            if (movement != null)
-            {
-                movement.enabled = true;
-            }
->>>>>>> Stashed changes
-        }
-    }
-
-    private float GetDurationForState(GameState state)
+    private float GetDuration(GameState state)
     {
         switch (state)
         {
@@ -193,39 +144,22 @@ public class PhaseLoopManager : MonoBehaviour
         }
     }
 
-    private void TransitionToNextState()
+    private void TransitionToNext()
     {
-        switch (CurrentState)
+        if (CurrentState == GameState.Awake)
         {
-            case GameState.Awake:
-                CurrentState = GameState.Dream;
-                break;
-            case GameState.Dream:
-                CurrentState = GameState.Confusion;
-                break;
-            case GameState.Confusion:
-                CurrentState = GameState.Awake;
-                break;
+            CurrentState = GameState.Dream;
         }
-    }
-
-    private IEnumerator FadeScreen(float targetAlpha)
-    {
-        if (screenFader == null) yield break;
-
-        if (targetAlpha > 0f) screenFader.blocksRaycasts = true;
-
-        float startAlpha = screenFader.alpha;
-        float time = 0;
-
-        while (time < fadeDuration)
+        else if (CurrentState == GameState.Dream)
         {
-            time += Time.deltaTime;
-            screenFader.alpha = Mathf.Lerp(startAlpha, targetAlpha, time / fadeDuration);
-            yield return null;
+            CurrentState = GameState.Awake;
+            currentLoop++;
+        }
+        else if (CurrentState == GameState.Confusion)
+        {
+            CurrentState = GameState.Awake;
         }
 
-        screenFader.alpha = targetAlpha;
-        if (targetAlpha == 0f) screenFader.blocksRaycasts = false;
+        Debug.Log("AUTO TRANSITION -> " + CurrentState);
     }
 }

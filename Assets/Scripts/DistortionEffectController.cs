@@ -186,6 +186,11 @@ public class DistortionEffectController : MonoBehaviour
             {
                 baseDistortionWeight = 0.6f;
             }
+            else if (currentState == GameState.Dream)
+            {
+                // ini yang bikin RGB ghosting aktif di dream
+                baseDistortionWeight = 0.25f;
+            }
             else
             {
                 baseDistortionWeight = 0f;

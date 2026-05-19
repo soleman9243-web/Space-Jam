@@ -4,7 +4,7 @@ using TMPro;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-public class MathTaskManager : MonoBehaviour
+public class MathTaskManager : BaseTask
 {
     [Header("UI Root")]
     [SerializeField] private GameObject parentUI;
@@ -176,10 +176,11 @@ public class MathTaskManager : MonoBehaviour
             PlayerStatus.Instance.IncreaseStability(GetRewardByDifficulty(difficulty));
         }
 
+        CompleteTask();
+
         Debug.Log("TASK COMPLETE");
         CloseTask();
     }
-
     private void OnFail()
     {
         Debug.Log("TASK FAILED");

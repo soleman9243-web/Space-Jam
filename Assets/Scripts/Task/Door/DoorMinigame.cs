@@ -1,6 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class DoorMinigame : MonoBehaviour
@@ -32,6 +30,14 @@ public class DoorMinigame : MonoBehaviour
         }
     }
 
+    private void HideAllDoors()
+    {
+        for (int i = 0; i < doors.Length; i++)
+        {
+            doors[i].gameObject.SetActive(false);
+        }
+    }
+
     public void ChooseDoor(DoorChoice chosenDoor)
     {
         if (finished)
@@ -42,14 +48,15 @@ public class DoorMinigame : MonoBehaviour
         if (chosenDoor.IsCorrect)
         {
             finished = true;
+
+            HideAllDoors(); // semua pintu hilang
+
             OnFinished?.Invoke(true);
         }
         else
         {
             PlayerStatus.Instance.ReduceStability(15);
             chosenDoor.gameObject.SetActive(false);
-
-            OnFinished?.Invoke(false);
         }
     }
 

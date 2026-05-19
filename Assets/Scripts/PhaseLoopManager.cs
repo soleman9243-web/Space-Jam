@@ -41,11 +41,10 @@ public class PhaseLoopManager : MonoBehaviour
     private void Start()
     {
         CurrentState = GlobalState;
+
         inspectorCurrentState = CurrentState;
 
-        Debug.Log("START STATE = " + CurrentState);
-
-        OnPhaseChanged?.Invoke(CurrentState);
+        StartCoroutine(InvokePhaseChangedNextFrame(CurrentState));
 
         if (autoLoopPhases)
         {
@@ -86,13 +85,20 @@ public class PhaseLoopManager : MonoBehaviour
 
         Debug.Log(">>> STATE SET TO: " + CurrentState);
 
+        StartCoroutine(InvokePhaseChangeNextFrame(targetState, wakeUpPosition));
+    }
+
+    private IEnumerator InvokePhaseChangeNextFrame(GameState targetState, Transform wakeUpPosition)
+    {
+        yield return null; // 🔥 tunggu 1 frame supaya semua listener siap
+
         OnPhaseChanged?.Invoke(CurrentState);
 
         if (targetState == GameState.Confusion)
         {
             Debug.Log("LOADING SCENE: " + phase3SceneName);
             SceneManager.LoadScene(phase3SceneName);
-            return;
+            yield break;
         }
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -108,17 +114,22 @@ public class PhaseLoopManager : MonoBehaviour
             }
 
             PlayerMovement move = player.GetComponent<PlayerMovement>();
-            if (move != null) move.enabled = true;
+            if (move != null)
+            {
+                move.enabled = true;
+            }
 
             Collider2D col = player.GetComponent<Collider2D>();
-            if (col != null) col.enabled = true;
+            if (col != null)
+            {
+                col.enabled = true;
+            }
         }
         else
         {
             Debug.LogWarning("PLAYER NOT FOUND");
         }
     }
-
     private IEnumerator PhaseLoopRoutine()
     {
         while (autoLoopPhases)
@@ -129,10 +140,14 @@ public class PhaseLoopManager : MonoBehaviour
 
             GlobalState = CurrentState;
 
-            OnPhaseChanged?.Invoke(CurrentState);
+            StartCoroutine(InvokePhaseChangedNextFrame(CurrentState));
         }
     }
-
+    private IEnumerator InvokePhaseChangedNextFrame(GameState state)
+    {
+        yield return null; // tunggu 1 frame biar semua object sync
+        OnPhaseChanged?.Invoke(state);
+    }
     private float GetDuration(GameState state)
     {
         switch (state)

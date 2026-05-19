@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -14,11 +15,12 @@ public class PhaseTaskManager : MonoBehaviour
     [Header("UI")]
     [SerializeField] private TextMeshProUGUI objectiveText;
 
-    private PhaseLoopManager phaseManager;
+    public PhaseLoopManager phaseManager;
 
-    private void Start()
+    private IEnumerator Start()
     {
-        phaseManager = FindObjectOfType<PhaseLoopManager>();
+        yield return null; // tunggu semua Awake selesai
+
 
         if (phaseManager != null)
         {
@@ -30,55 +32,78 @@ public class PhaseTaskManager : MonoBehaviour
 
     private void OnPhaseChanged(GameState state)
     {
+        if (phaseManager == null)
+        {
+            return;
+        }
+
+        if (state != phaseManager.CurrentState)
+        {
+            return;
+        }
+
         SetupTasks();
     }
 
     public void SetupTasks()
-{
-    currentTasks = new List<BaseTask>();
-
-    GameState state = phaseManager.CurrentState;
-
-    // ?? RESET ALL TASK STATE (INI FIX UTAMA)
-    foreach (var task in awakeTasks)
     {
-        task.ResetTask();
+        if (phaseManager == null)
+        {
+            Debug.LogError("PhaseLoopManager not found!");
+            return;
+        }
+
+        currentTasks = new List<BaseTask>();
+
+        GameState state = phaseManager.CurrentState;
+
+        // STOP semua task aktif dulu
+        foreach (var task in awakeTasks)
+        {
+            task.DeactivateTask();
+            task.ResetTask();
+        }
+
+        foreach (var task in dreamTasks)
+        {
+            task.DeactivateTask();
+            task.ResetTask();
+        }
+
+        if (state == GameState.Awake)
+        {
+            currentTasks.AddRange(awakeTasks);
+        }
+        else if (state == GameState.Dream)
+        {
+            currentTasks.AddRange(dreamTasks);
+        }
+
+        ShuffleTasks();
+
+        bed.canSleep = false;
+
+        if (currentTasks.Count > 0)
+        {
+            currentTasks[0].ActivateTask();
+        }
+        else
+        {
+            bed.canSleep = true;
+        }
+
+        UpdateObjectiveUI();
+
+        Debug.Log("TASK RESET COMPLETE: " + state);
     }
-
-    foreach (var task in dreamTasks)
-    {
-        task.ResetTask();
-    }
-
-    if (state == GameState.Awake)
-    {
-        currentTasks.AddRange(awakeTasks);
-    }
-    else if (state == GameState.Dream)
-    {
-        currentTasks.AddRange(dreamTasks);
-    }
-
-    ShuffleTasks();
-
-    bed.canSleep = false;
-
-    if (currentTasks.Count > 0)
-    {
-        currentTasks[0].ActivateTask();
-    }
-    else
-    {
-        bed.canSleep = true;
-    }
-
-    UpdateObjectiveUI();
-
-    Debug.Log("TASK COUNT: " + currentTasks.Count + " STATE: " + state);
-}
 
     public void CompleteTask(BaseTask task)
     {
+        if (currentTasks == null)
+        {
+            return;
+        }
+
         currentTasks.Remove(task);
 
         UpdateObjectiveUI();
@@ -105,13 +130,13 @@ public class PhaseTaskManager : MonoBehaviour
             return;
         }
 
-        if (currentTasks.Count <= 0)
+        if (currentTasks == null || currentTasks.Count <= 0)
         {
             objectiveText.text = "";
             return;
         }
 
-        objectiveText.text = currentTasks[0].GetTaskText();
+        objectiveText.text = currentTasks[0].taskText;
     }
 
     private void ShuffleTasks()

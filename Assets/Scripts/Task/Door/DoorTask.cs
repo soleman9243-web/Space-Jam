@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class DoorTask : BaseTask
@@ -22,9 +20,8 @@ public class DoorTask : BaseTask
         if (success)
         {
             PlayerStatus.Instance.IncreaseStability(50);
+            CompleteTask();
         }
-
-        CompleteTask();
     }
 
     public override void DeactivateTask()

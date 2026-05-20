@@ -7,11 +7,16 @@ public class BaseTask : MonoBehaviour
 
     protected bool completed = false;
 
-    public bool IsActive { get; private set; }
+    public bool IsActive
+    {
+        get;
+        private set;
+    }
 
     public virtual void ActivateTask()
     {
         IsActive = true;
+
         completed = false;
     }
 
@@ -23,7 +28,18 @@ public class BaseTask : MonoBehaviour
     public virtual void ResetTask()
     {
         completed = false;
+
         IsActive = false;
+    }
+
+    // =====================================
+    // FORCE STOP
+    // Dipakai saat masuk Liminal
+    // =====================================
+
+    public virtual void ForceStopTask()
+    {
+        DeactivateTask();
     }
 
     public virtual void CompleteTask()
@@ -34,6 +50,7 @@ public class BaseTask : MonoBehaviour
         }
 
         completed = true;
+
         DeactivateTask();
 
         FindObjectOfType<PhaseTaskManager>()
@@ -44,5 +61,4 @@ public class BaseTask : MonoBehaviour
     {
         return taskText;
     }
-
 }

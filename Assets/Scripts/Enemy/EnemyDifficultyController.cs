@@ -1,61 +1,71 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class EnemyDifficultyController : MonoBehaviour
 {
+    [Header("References")]
     [SerializeField] private EnemyDashSpawner spawner;
 
-    [SerializeField] private int difficultyLevel = 1;
+    [Header("Difficulty")]
+    [SerializeField] private int difficulty = 1;
+    [SerializeField] private int maxDifficulty = 10;
+
+    [Header("Pattern Scaling")]
+    [SerializeField] private int basePattern = 1;
+    [SerializeField] private int maxPattern = 8;
+
+    [Header("Liminal Mode")]
+    [SerializeField] private bool liminalMode;
+    [SerializeField] private float timer;
 
     private void Update()
     {
-        Apply();
+        if (!liminalMode)
+        {
+            return;
+        }
+
+        timer += Time.deltaTime;
+
+        if (timer >= 10f)
+        {
+            timer = 0f;
+            difficulty = Mathf.Clamp(difficulty + 1, 1, maxDifficulty);
+            Apply();
+        }
     }
 
     private void Apply()
     {
-        switch (difficultyLevel)
+        if (spawner == null)
         {
-            case 1:
-                spawner.SetTrackCount(1);
-                spawner.SetDashSpeed(12f);
-                spawner.SetSpawnCooldown(2.5f);
-                spawner.SetFollowDuration(2.5f);
-                break;
-
-            case 2:
-                spawner.SetTrackCount(2);
-                spawner.SetDashSpeed(15f);
-                spawner.SetSpawnCooldown(2f);
-                spawner.SetFollowDuration(2f);
-                break;
-
-            case 3:
-                spawner.SetTrackCount(3);
-                spawner.SetDashSpeed(18f);
-                spawner.SetSpawnCooldown(1.5f);
-                spawner.SetFollowDuration(1.8f);
-                break;
-
-            case 4:
-                spawner.SetTrackCount(4);
-                spawner.SetDashSpeed(22f);
-                spawner.SetSpawnCooldown(1.2f);
-                spawner.SetFollowDuration(1.5f);
-                break;
-
-            default:
-                spawner.SetTrackCount(5);
-                spawner.SetDashSpeed(28f);
-                spawner.SetSpawnCooldown(0.8f);
-                spawner.SetFollowDuration(1f);
-                break;
+            return;
         }
+
+        spawner.SetTrackCount(Mathf.Clamp(difficulty, 1, 5));
+        spawner.SetDashSpeed(12f + difficulty * 3f);
+        spawner.SetSpawnCooldown(Mathf.Max(0.5f, 2.5f - difficulty * 0.2f));
+        spawner.SetFollowDuration(Mathf.Max(0.8f, 2.5f - difficulty * 0.15f));
     }
 
-    public void SetDifficulty(int level)
+    public int GetDifficulty()
     {
-        difficultyLevel = level;
+        return difficulty;
+    }
+
+    public int GetPatternCount()
+    {
+        return Mathf.Clamp(basePattern + difficulty / 2, 1, maxPattern);
+    }
+
+    public void SetLiminalMode(bool value)
+    {
+        liminalMode = value;
+        timer = 0f;
+    }
+
+    public void SetDifficulty(int value)
+    {
+        difficulty = Mathf.Clamp(value, 1, maxDifficulty);
+        Apply();
     }
 }

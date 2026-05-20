@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -7,8 +5,10 @@ public class InteractObject2D : MonoBehaviour
 {
     [Header("Task Lock")]
     public bool requireActiveTask;
-
     public BaseTask linkedTask;
+
+    [Header("Player Control")]
+    [SerializeField] private bool lockPlayerOnInteract = true;
 
     [Header("Events")]
     public UnityEvent onInteract = new UnityEvent();
@@ -26,6 +26,11 @@ public class InteractObject2D : MonoBehaviour
             {
                 return;
             }
+        }
+
+        if (PlayerMovement.Instance != null)
+        {
+            PlayerMovement.Instance.StopMovement();
         }
 
         onInteract.Invoke();

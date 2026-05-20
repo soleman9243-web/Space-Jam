@@ -1,11 +1,13 @@
 using System;
-using System.Collections;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
     public event Action<bool> OnMovementChanged;
 
+    public static PlayerMovement Instance { get; private set; }
+
+    [Header("Movement")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private Animator anim;
     [SerializeField] private SpriteRenderer spriteRenderer;
@@ -13,14 +15,19 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody2D rb;
 
     private Vector2 moveInput;
-    private Vector2 lastDirection;
-
     private bool lastIsMoving;
 
     public bool IsMoving { get; private set; }
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
         rb = GetComponent<Rigidbody2D>();
     }
 
@@ -30,11 +37,6 @@ public class PlayerMovement : MonoBehaviour
         float moveY = Input.GetAxisRaw("Vertical");
 
         moveInput = new Vector2(moveX, moveY).normalized;
-
-        if (moveInput != Vector2.zero)
-        {
-            lastDirection = moveInput;
-        }
 
         IsMoving = moveInput.sqrMagnitude > 0.01f;
 
@@ -53,15 +55,32 @@ public class PlayerMovement : MonoBehaviour
         rb.velocity = moveInput * moveSpeed;
     }
 
+    // ?? DIPANGGIL SAAT INTERACT
+    public void StopMovement()
+    {
+        moveInput = Vector2.zero;
+        rb.velocity = Vector2.zero;
+
+        IsMoving = false;
+
+        if (lastIsMoving)
+        {
+            lastIsMoving = false;
+            OnMovementChanged?.Invoke(false);
+        }
+
+        UpdateAnimation();
+    }
+
     private void HandleFlip()
     {
         if (moveInput.x > 0)
         {
-            spriteRenderer.flipX = false;
+            spriteRenderer.flipX = true;
         }
         else if (moveInput.x < 0)
         {
-            spriteRenderer.flipX = true;
+            spriteRenderer.flipX = false;
         }
     }
 
@@ -70,9 +89,17 @@ public class PlayerMovement : MonoBehaviour
         anim.SetFloat("MoveX", moveInput.x);
         anim.SetFloat("MoveY", moveInput.y);
 
-        anim.SetFloat("LastMoveX", lastDirection.x);
-        anim.SetFloat("LastMoveY", lastDirection.y);
+        if (IsMoving)
+        {
+            anim.SetFloat("LastMoveX", moveInput.x);
+            anim.SetFloat("LastMoveY", moveInput.y);
+        }
+        else
+        {
+            anim.SetFloat("LastMoveX", 0f);
+            anim.SetFloat("LastMoveY", -1f);
+        }
 
-        anim.SetBool("isMoving", moveInput != Vector2.zero);
+        anim.SetBool("isMoving", IsMoving);
     }
 }

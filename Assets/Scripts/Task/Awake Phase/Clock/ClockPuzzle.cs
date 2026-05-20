@@ -1,268 +1,156 @@
-using System.Collections;
-using TMPro;
-using UnityEngine;
+    using System.Collections;
+    using TMPro;
+    using UnityEngine;
 
-public class ClockPuzzle : BaseTask
-{
-    [Header("References")]
-    [SerializeField] private RectTransform minuteHand;
-    [SerializeField] private RectTransform hourHand;
-
-    [SerializeField] private GameObject puzzleUI;
-    [SerializeField] private MonoBehaviour playerMovement;
-    [SerializeField] private PlayerInteract2D playerInteract;
-
-    [Header("UI")]
-    [SerializeField] private TextMeshProUGUI timerText;
-
-    [Header("Timer")]
-    [SerializeField] private float baseTimer = 40f;
-    [SerializeField] private float timerReductionPerLoop = 4f;
-    [SerializeField] private float minimumTimer = 12f;
-
-    [Header("Stability")]
-    [SerializeField] private float baseFailPenalty = 10f;
-    [SerializeField] private float penaltyIncreasePerLoop = 2f;
-
-    [SerializeField] private float baseReward = 5f;
-    [SerializeField] private float rewardIncreasePerLoop = 1f;
-
-    private int startMinutes;
-
-    private int targetMinutes;
-
-    private int currentMinutes;
-
-    private bool isActive;
-
-    private float currentTimer;
-
-    private void Start()
+    public class ClockPuzzle : BaseTask
     {
-        puzzleUI.SetActive(false);
-    }
+        [Header("References")]
+        [SerializeField] private RectTransform minuteHand;
+        [SerializeField] private RectTransform hourHand;
 
-    public void ActivateTask()
-    {
-        currentMinutes = startMinutes;
+        [SerializeField] private GameObject puzzleUI;
+        [SerializeField] private MonoBehaviour playerMovement;
+        [SerializeField] private PlayerInteract2D playerInteract;
 
-        UpdateClockVisual();
-    }
+        [Header("UI")]
+        [SerializeField] private TextMeshProUGUI timerText;
 
-    private void Update()
-    {
-        if (!isActive)
+        [Header("Timer")]
+        [SerializeField] private float baseTimer = 40f;
+        [SerializeField] private float timerReductionPerLoop = 4f;
+        [SerializeField] private float minimumTimer = 12f;
+
+        [Header("Stability")]
+        [SerializeField] private float baseFailPenalty = 10f;
+        [SerializeField] private float penaltyIncreasePerLoop = 2f;
+
+        [SerializeField] private float baseReward = 5f;
+        [SerializeField] private float rewardIncreasePerLoop = 1f;
+
+        private int startMinutes;
+
+        private int targetMinutes;
+
+        private int currentMinutes;
+
+        private bool isActive;
+
+        private float currentTimer;
+
+        private void Start()
         {
-            return;
+            puzzleUI.SetActive(false);
         }
 
-        UpdateTimer();
-
-        if (Input.GetKeyDown(KeyCode.A))
+        public void ActivateTask()
         {
-            RotateTime(-5);
+            currentMinutes = startMinutes;
+
+            UpdateClockVisual();
         }
 
-        if (Input.GetKeyDown(KeyCode.D))
+        private void Update()
         {
-            RotateTime(5);
-        }
-    }
+            if (!isActive)
+            {
+                return;
+            }
 
-    public void OpenPuzzle()
-    {
-        if (completed)
-        {
-            return;
-        }
+            UpdateTimer();
 
-        GenerateRandomTime();
+            if (Input.GetKeyDown(KeyCode.A))
+            {
+                RotateTime(-5);
+            }
 
-        isActive = true;
-
-        currentMinutes = startMinutes;
-
-        UpdateClockVisual();
-
-        puzzleUI.SetActive(true);
-
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = false;
+            if (Input.GetKeyDown(KeyCode.D))
+            {
+                RotateTime(5);
+            }
         }
 
-        if (playerInteract != null)
+        public void OpenPuzzle()
         {
-            playerInteract.canInteract = false;
+            if (completed)
+            {
+                return;
+            }
+
+            GenerateRandomTime();
+
+            isActive = true;
+
+            currentMinutes = startMinutes;
+
+            UpdateClockVisual();
+
+            puzzleUI.SetActive(true);
+
+            if (playerMovement != null)
+            {
+                playerMovement.enabled = false;
+            }
+
+            if (playerInteract != null)
+            {
+                playerInteract.canInteract = false;
+            }
+
+            SetupTimer();
+
+            PhaseTaskManager taskManager =
+                FindObjectOfType<PhaseTaskManager>();
+
+            if (taskManager != null)
+            {
+                taskManager.UpdateObjectiveUI();
+            }
         }
 
-        SetupTimer();
-
-        PhaseTaskManager taskManager =
-            FindObjectOfType<PhaseTaskManager>();
-
-        if (taskManager != null)
+        public void ClosePuzzle()
         {
-            taskManager.UpdateObjectiveUI();
-        }
-    }
+            isActive = false;
 
-    public void ClosePuzzle()
-    {
-        isActive = false;
+            puzzleUI.SetActive(false);
 
-        puzzleUI.SetActive(false);
+            if (playerMovement != null)
+            {
+                playerMovement.enabled = true;
+            }
 
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = true;
+            if (playerInteract != null)
+            {
+                playerInteract.canInteract = true;
+            }
         }
 
-        if (playerInteract != null)
+        private void GenerateRandomTime()
         {
-            playerInteract.canInteract = true;
-        }
-    }
+            startMinutes =
+                Random.Range(0, 12) * 60;
 
-    private void GenerateRandomTime()
-    {
-        startMinutes =
-            Random.Range(0, 12) * 60;
+            int randomAdd;
 
-        int randomAdd;
+            do
+            {
+                randomAdd =
+                    Random.Range(3, 12) * 5;
+            }
+            while (randomAdd <= 15);
 
-        do
-        {
-            randomAdd =
-                Random.Range(3, 12) * 5;
-        }
-        while (randomAdd <= 15);
+            targetMinutes =
+                startMinutes + randomAdd;
 
-        targetMinutes =
-            startMinutes + randomAdd;
+            if (targetMinutes >= 720)
+            {
+                targetMinutes -= 720;
+            }
 
-        if (targetMinutes >= 720)
-        {
-            targetMinutes -= 720;
+            taskText =
+                "Make the clock to " + FormatTime(targetMinutes);
         }
 
-        taskText =
-            "Make the clock to " + FormatTime(targetMinutes);
-    }
-
-    private void SetupTimer()
-    {
-        PhaseLoopManager phaseManager =
-            FindObjectOfType<PhaseLoopManager>();
-
-        int loop =
-            phaseManager != null
-            ? phaseManager.currentLoop
-            : 1;
-
-        currentTimer =
-            baseTimer - ((loop - 1) * timerReductionPerLoop);
-
-        currentTimer =
-            Mathf.Max(currentTimer, minimumTimer);
-
-        UpdateTimerUI();
-    }
-
-    private void UpdateTimer()
-    {
-        currentTimer -= Time.deltaTime;
-
-        if (currentTimer <= 0f)
-        {
-            currentTimer = 0f;
-
-            UpdateTimerUI();
-
-            FailPuzzle();
-
-            return;
-        }
-
-        UpdateTimerUI();
-    }
-
-    private void UpdateTimerUI()
-    {
-        if (timerText == null)
-        {
-            return;
-        }
-
-        timerText.text =
-            Mathf.CeilToInt(currentTimer).ToString();
-    }
-
-    private void FailPuzzle()
-    {
-        ClosePuzzle();
-
-        PhaseLoopManager phaseManager =
-            FindObjectOfType<PhaseLoopManager>();
-
-        int loop =
-            phaseManager != null
-            ? phaseManager.currentLoop
-            : 1;
-
-        float penalty =
-            baseFailPenalty + ((loop - 1) * penaltyIncreasePerLoop);
-
-        if (PlayerStatus.Instance != null)
-        {
-            PlayerStatus.Instance.ReduceStability(penalty);
-        }
-
-        Debug.Log("Clock gagal");
-    }
-
-    private void RotateTime(int amount)
-    {
-        currentMinutes += amount;
-
-        if (currentMinutes < 0)
-        {
-            currentMinutes += 720;
-        }
-
-        if (currentMinutes >= 720)
-        {
-            currentMinutes -= 720;
-        }
-
-        UpdateClockVisual();
-
-        CheckAnswer();
-    }
-
-    private void UpdateClockVisual()
-    {
-        float minuteRotation =
-            -(currentMinutes % 60) * 6f;
-
-        float hourRotation =
-            -(currentMinutes / 60f) * 30f;
-
-        minuteHand.localRotation =
-            Quaternion.Euler(0f, 0f, minuteRotation);
-
-        hourHand.localRotation =
-            Quaternion.Euler(0f, 0f, hourRotation);
-    }
-
-    private void CheckAnswer()
-    {
-        if (completed)
-        {
-            return;
-        }
-
-        if (currentMinutes == targetMinutes)
+        private void SetupTimer()
         {
             PhaseLoopManager phaseManager =
                 FindObjectOfType<PhaseLoopManager>();
@@ -272,28 +160,148 @@ public class ClockPuzzle : BaseTask
                 ? phaseManager.currentLoop
                 : 1;
 
-            float reward =
-                baseReward + ((loop - 1) * rewardIncreasePerLoop);
+            currentTimer =
+                baseTimer - ((loop - 1) * timerReductionPerLoop);
+
+            currentTimer =
+                Mathf.Max(currentTimer, minimumTimer);
+
+            UpdateTimerUI();
+        }
+
+        private void UpdateTimer()
+        {
+            currentTimer -= Time.deltaTime;
+
+            if (currentTimer <= 0f)
+            {
+                currentTimer = 0f;
+
+                UpdateTimerUI();
+
+                FailPuzzle();
+
+                return;
+            }
+
+            UpdateTimerUI();
+        }
+
+        private void UpdateTimerUI()
+        {
+            if (timerText == null)
+            {
+                return;
+            }
+
+            timerText.text =
+                Mathf.CeilToInt(currentTimer).ToString();
+        }
+
+        private void FailPuzzle()
+        {
+            ClosePuzzle();
+
+            PhaseLoopManager phaseManager =
+                FindObjectOfType<PhaseLoopManager>();
+
+            int loop =
+                phaseManager != null
+                ? phaseManager.currentLoop
+                : 1;
+
+            float penalty =
+                baseFailPenalty + ((loop - 1) * penaltyIncreasePerLoop);
 
             if (PlayerStatus.Instance != null)
             {
-                PlayerStatus.Instance.IncreaseStability(reward);
+                PlayerStatus.Instance.ReduceStability(penalty);
             }
 
-            CompleteTask();
-
-            ClosePuzzle();
-
-            Debug.Log("Clock selesai");
+            Debug.Log("Clock gagal");
         }
-    }
 
-    private string FormatTime(int minutes)
+        private void RotateTime(int amount)
+        {
+            currentMinutes += amount;
+
+            if (currentMinutes < 0)
+            {
+                currentMinutes += 720;
+            }
+
+            if (currentMinutes >= 720)
+            {
+                currentMinutes -= 720;
+            }
+
+            UpdateClockVisual();
+
+            CheckAnswer();
+        }
+
+        private void UpdateClockVisual()
+        {
+            float minuteRotation =
+                -(currentMinutes % 60) * 6f;
+
+            float hourRotation =
+                -(currentMinutes / 60f) * 30f;
+
+            minuteHand.localRotation =
+                Quaternion.Euler(0f, 0f, minuteRotation);
+
+            hourHand.localRotation =
+                Quaternion.Euler(0f, 0f, hourRotation);
+        }
+
+        private void CheckAnswer()
+        {
+            if (completed)
+            {
+                return;
+            }
+
+            if (currentMinutes == targetMinutes)
+            {
+                PhaseLoopManager phaseManager =
+                    FindObjectOfType<PhaseLoopManager>();
+
+                int loop =
+                    phaseManager != null
+                    ? phaseManager.currentLoop
+                    : 1;
+
+                float reward =
+                    baseReward + ((loop - 1) * rewardIncreasePerLoop);
+
+                if (PlayerStatus.Instance != null)
+                {
+                    PlayerStatus.Instance.IncreaseStability(reward);
+                }
+
+                CompleteTask();
+
+                ClosePuzzle();
+
+                Debug.Log("Clock selesai");
+            }
+        }
+
+        private string FormatTime(int minutes)
+        {
+            int hour = minutes / 60;
+
+            int minute = minutes % 60;
+
+            return hour.ToString("00") + ":" + minute.ToString("00");
+        }
+    public override void ForceStopTask()
     {
-        int hour = minutes / 60;
+        isActive = false;
 
-        int minute = minutes % 60;
+        ClosePuzzle();
 
-        return hour.ToString("00") + ":" + minute.ToString("00");
+        DeactivateTask();
     }
 }

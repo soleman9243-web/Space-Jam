@@ -9,6 +9,9 @@ public class DoorChoice : MonoBehaviour
     public bool IsCorrect { get; private set; }
 
     public void SetDoor(DoorMinigame doorManager, bool correct)
+
+
+        
     {
         manager = doorManager;
         IsCorrect = correct;

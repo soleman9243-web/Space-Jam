@@ -1,60 +1,40 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class EnemyWaveController : MonoBehaviour
 {
-    [Header("References")]
     [SerializeField] private EnemyDashSpawner spawner;
-    [SerializeField] private PlayerStatus player;
-
-    [Header("Stability Rule")]
-    [SerializeField] private float activateThreshold = 30f;
 
     [Header("Difficulty")]
     [SerializeField] private int difficulty = 1;
-    [SerializeField] private int wavesCleared = 0;
+    [SerializeField] private int maxDifficulty = 10;
 
-    [Header("Wave Scaling")]
-    [SerializeField] private int wavesPerDifficulty = 5;
+    private bool liminalMode;
+    private float timer;
 
-    private bool isActive = false;
+    public int GetDifficulty()
+    {
+        return difficulty;
+    }
+
+    public void SetLiminalMode(bool v)
+    {
+        liminalMode = v;
+        timer = 0f;
+    }
 
     private void Update()
     {
-        HandleSpawnState();
-    }
-
-    private void HandleSpawnState()
-    {
-        float stability = player.stability;
-
-        if (stability < activateThreshold)
+        if (!liminalMode)
         {
-            if (!isActive)
-            {
-                isActive = true;
-                spawner.StartSpawning();
-            }
+            return;
         }
-        else
-        {
-            if (isActive)
-            {
-                isActive = false;
-                spawner.StopSpawning();
-            }
-        }
-    }
 
-    public void RegisterWaveComplete()
-    {
-        wavesCleared++;
+        timer += Time.deltaTime;
 
-        if (wavesCleared >= wavesPerDifficulty)
+        if (timer >= 10f)
         {
-            wavesCleared = 0;
-            difficulty++;
+            timer = 0f;
+            difficulty = Mathf.Clamp(difficulty + 1, 1, maxDifficulty);
 
             ApplyDifficulty();
         }
@@ -64,7 +44,7 @@ public class EnemyWaveController : MonoBehaviour
     {
         spawner.SetTrackCount(Mathf.Clamp(difficulty, 1, 5));
         spawner.SetDashSpeed(12f + difficulty * 3f);
-        spawner.SetSpawnCooldown(Mathf.Max(0.8f, 2.5f - difficulty * 0.2f));
-        spawner.SetFollowDuration(Mathf.Max(1f, 2.5f - difficulty * 0.15f));
+        spawner.SetSpawnCooldown(Mathf.Max(0.5f, 2.5f - difficulty * 0.2f));
+        spawner.SetFollowDuration(Mathf.Max(0.8f, 2.5f - difficulty * 0.15f));
     }
 }

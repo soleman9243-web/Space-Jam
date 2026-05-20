@@ -40,7 +40,7 @@ public class DashEnemy : MonoBehaviour
         else
         {
             anim.SetInteger("Direction", 1);
-            sr.flipX = dir == Vector2.left;
+            sr.flipX = dir == Vector2.right;
         }
     }
 

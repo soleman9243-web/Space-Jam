@@ -13,6 +13,7 @@ public class MathTaskManager : BaseTask
     [SerializeField] private TextMeshProUGUI questionText;
     [SerializeField] private TextMeshProUGUI progressText;
     [SerializeField] private TextMeshProUGUI timerText;
+    [SerializeField] private TextMeshProUGUI difficultyText; // opsional, info ke player
     [SerializeField] private TMP_InputField answerInput;
 
     [Header("Feedback UI")]
@@ -20,18 +21,21 @@ public class MathTaskManager : BaseTask
     [SerializeField] private Image flashImage;
 
     [Header("Settings")]
-    [SerializeField] private int difficulty = 1;
     [SerializeField] private int totalQuestions = 5;
+
+    [Header("Difficulty Scaling Per Loop")]
+    [SerializeField] private int baseDifficulty = 1;
+    [SerializeField] private int difficultyPerLoop = 2;
+    [SerializeField] private int maxDifficulty = 10;
 
     [Header("Player")]
     [SerializeField] private PlayerMovement playerMovement;
 
-
+    private int currentDifficulty;
     private int currentQuestionIndex;
     private int correctAnswer;
     private float timeLeft;
     private bool isRunning;
-
     private int wrongCount;
 
     public System.Action OnTaskFinished;
@@ -44,10 +48,7 @@ public class MathTaskManager : BaseTask
 
     private void Update()
     {
-        if (!isRunning)
-        {
-            return;
-        }
+        if (!isRunning) return;
 
         HandleEnter();
         ForceInputFocus();
@@ -63,12 +64,16 @@ public class MathTaskManager : BaseTask
         UpdateTimerUI();
     }
 
+    private int GetCurrentLoop()
+    {
+        PhaseLoopManager pm = FindObjectOfType<PhaseLoopManager>();
+        return pm != null ? pm.currentLoop : 1;
+    }
+
     private void HandleEnter()
     {
         if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
-        {
             SubmitAnswer();
-        }
     }
 
     private void ForceInputFocus()
@@ -82,23 +87,28 @@ public class MathTaskManager : BaseTask
 
     public void OpenTask()
     {
+        // Hitung difficulty dari loop saat ini
+        int loop = GetCurrentLoop();
+        currentDifficulty = Mathf.Clamp(
+            baseDifficulty + (loop - 1) * difficultyPerLoop,
+            1, maxDifficulty
+        );
+
         parentUI.SetActive(true);
 
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = false;
-        }
+        if (playerMovement != null) playerMovement.enabled = false;
 
         currentQuestionIndex = 0;
         wrongCount = 0;
 
-        StartTimer(GetTimerByDifficulty(difficulty));
+        StartTimer(GetTimerByDifficulty(currentDifficulty));
         GenerateQuestion();
         UpdateProgressUI();
 
-        answerInput.text = "";
+        if (difficultyText != null)
+            difficultyText.text = "Difficulty: " + currentDifficulty + " (Loop " + loop + ")";
 
-        // pastikan hanya angka (TMP InputField setting)
+        answerInput.text = "";
         answerInput.contentType = TMP_InputField.ContentType.IntegerNumber;
         answerInput.ForceLabelUpdate();
 
@@ -111,22 +121,14 @@ public class MathTaskManager : BaseTask
     private void CloseTask()
     {
         isRunning = false;
-
         parentUI.SetActive(false);
-
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = true;
-        }
-
+        if (playerMovement != null) playerMovement.enabled = true;
         OnTaskFinished?.Invoke();
     }
+
     public void SubmitAnswer()
     {
-        if (!isRunning)
-        {
-            return;
-        }
+        if (!isRunning) return;
 
         if (!int.TryParse(answerInput.text, out int playerAnswer))
         {
@@ -137,7 +139,6 @@ public class MathTaskManager : BaseTask
         if (playerAnswer == correctAnswer)
         {
             StartCoroutine(CorrectFeedback());
-
             currentQuestionIndex++;
 
             if (currentQuestionIndex >= totalQuestions)
@@ -151,13 +152,9 @@ public class MathTaskManager : BaseTask
         else
         {
             wrongCount++;
-
-            float penalty = GetPenaltyByDifficulty(difficulty);
-
+            float penalty = GetPenaltyByDifficulty(currentDifficulty);
             if (PlayerStatus.Instance != null)
-            {
                 PlayerStatus.Instance.ReduceStability(penalty);
-            }
 
             timeLeft -= 2f;
             StartCoroutine(ShakeUI());
@@ -165,29 +162,25 @@ public class MathTaskManager : BaseTask
 
         answerInput.text = "";
         answerInput.ActivateInputField();
-
         UpdateProgressUI();
     }
 
     private void OnWin()
     {
         if (PlayerStatus.Instance != null)
-        {
-            PlayerStatus.Instance.IncreaseStability(GetRewardByDifficulty(difficulty));
-        }
+            PlayerStatus.Instance.IncreaseStability(GetRewardByDifficulty(currentDifficulty));
 
         CompleteTask();
-
-        Debug.Log("TASK COMPLETE");
+        Debug.Log("MATH TASK COMPLETE");
         CloseTask();
     }
+
     private void OnFail()
     {
-        Debug.Log("TASK FAILED");
+        Debug.Log("MATH TASK FAILED");
         CloseTask();
     }
 
-    // ================= rest unchanged =================
     private float GetPenaltyByDifficulty(int diff)
     {
         if (diff <= 2) return 2f;
@@ -208,19 +201,14 @@ public class MathTaskManager : BaseTask
 
     private void GenerateQuestion()
     {
-        int range = GetRangeByDifficulty(difficulty);
-
+        int range = GetRangeByDifficulty(currentDifficulty);
         int a = Random.Range(1, range);
         int b = Random.Range(1, range);
-
         correctAnswer = a + b;
         questionText.text = a + " + " + b + " = ?";
     }
 
-    private void StartTimer(float duration)
-    {
-        timeLeft = duration;
-    }
+    private void StartTimer(float duration) { timeLeft = duration; }
 
     private float GetTimerByDifficulty(int diff)
     {
@@ -240,30 +228,20 @@ public class MathTaskManager : BaseTask
         return 200;
     }
 
-    private void UpdateProgressUI()
-    {
-        progressText.text = currentQuestionIndex + "/" + totalQuestions;
-    }
-
-    private void UpdateTimerUI()
-    {
-        timerText.text = Mathf.Ceil(timeLeft) + "s";
-    }
+    private void UpdateProgressUI() { progressText.text = currentQuestionIndex + "/" + totalQuestions; }
+    private void UpdateTimerUI() { timerText.text = Mathf.Ceil(timeLeft) + "s"; }
 
     private IEnumerator CorrectFeedback()
     {
         flashImage.color = Color.green;
         flashImage.canvasRenderer.SetAlpha(0.3f);
-
         yield return new WaitForSeconds(0.15f);
-
         flashImage.canvasRenderer.SetAlpha(0f);
     }
 
     private IEnumerator ShakeUI()
     {
         Vector3 originalPos = uiPanel.localPosition;
-
         float elapsed = 0f;
         float duration = 0.2f;
         float strength = 10f;
@@ -272,13 +250,21 @@ public class MathTaskManager : BaseTask
         {
             float x = Random.Range(-strength, strength);
             float y = Random.Range(-strength, strength);
-
             uiPanel.localPosition = originalPos + new Vector3(x, y, 0);
-
             elapsed += Time.deltaTime;
             yield return null;
         }
 
         uiPanel.localPosition = originalPos;
+    }
+    public override void ForceStopTask()
+    {
+        StopAllCoroutines();
+
+        isRunning = false;
+
+        CloseTask();
+
+        DeactivateTask();
     }
 }

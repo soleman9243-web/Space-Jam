@@ -2,37 +2,52 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
+using SpaceJam.Environment;
 
 public enum GameState
 {
     Awake,
     Dream,
-    Confusion
+    Liminal
 }
-
 public class PhaseLoopManager : MonoBehaviour
 {
-    public bool autoLoopPhases = false;
-    public bool useInSceneConfusionMinigame = true;
+    [Header("Liminal")]
+    public bool useInSceneLiminal = true;
+
+    [SerializeField]
+    private LiminalRoomManager liminalRoomManager;
 
     public int currentLoop = 1;
 
-    public string phase3SceneName = "ConfusionScene";
+    public string liminalSceneName = "LiminalScene";
 
-    public float awakeDuration = 10f;
-    public float dreamDuration = 20f;
-    public float confusionDuration = 15f;
-
+    [Header("Fade")]
     public CanvasGroup screenFader;
+
     public float fadeDuration = 1f;
+
+    [Header("Day Night Cycle")]
+    public DayNightCycle2D dayNightCycle;
 
     public UnityEvent<GameState> OnPhaseChanged;
 
     public GameState inspectorCurrentState;
 
-    public GameState CurrentState { get; private set; }
+    public GameState CurrentState
+    {
+        get;
+        private set;
+    }
 
-    public static GameState GlobalState = GameState.Awake;
+    public GameState PreviousState
+    {
+        get;
+        private set;
+    }
+
+    public static GameState GlobalState =
+        GameState.Awake;
 
     private void Awake()
     {
@@ -45,90 +60,186 @@ public class PhaseLoopManager : MonoBehaviour
 
         inspectorCurrentState = CurrentState;
 
-        StartCoroutine(InvokePhaseChangedNextFrame(CurrentState));
-
-        if (autoLoopPhases)
+        if (dayNightCycle != null)
         {
-            StartCoroutine(PhaseLoopRoutine());
+            dayNightCycle.OnPhaseChanged
+                .AddListener(OnDayPhaseChanged);
         }
+        else
+        {
+            Debug.LogWarning(
+                "[PhaseLoopManager] DayNightCycle2D not assigned!"
+            );
+        }
+
+        StartCoroutine(
+            InvokePhaseChangedNextFrame(CurrentState)
+        );
     }
 
     private void Update()
     {
         inspectorCurrentState = CurrentState;
 
-        // DEBUG REAL STATE
-        Debug.Log("STATE NOW = " + CurrentState);
-
-        if (CurrentState == GameState.Dream)
+        if (CurrentState == GameState.Liminal)
         {
-            float stability = PlayerStatus.Instance != null
-                ? PlayerStatus.Instance.stability
-                : 100f;
+            return;
+        }
 
-            if (stability <= 30f)
-            {
-                StartManualTransition(GameState.Confusion);
-            }
+        float stability =
+            PlayerStatus.Instance != null
+            ? PlayerStatus.Instance.stability
+            : 100f;
+
+        if (stability <= 30f)
+        {
+            PreviousState = CurrentState;
+
+            StartManualTransition(GameState.Liminal);
         }
     }
 
-    // =======================
-    // MAIN TRANSITION (FIXED)
-    // =======================
-    public void StartManualTransition(GameState targetState, Transform wakeUpPosition = null)
+    // =============================================
+    // DAY NIGHT CYCLE
+    // =============================================
+
+    private void OnDayPhaseChanged(DayPhase dayPhase)
     {
-        Debug.Log(">>> TRANSITION REQUEST: " + targetState);
+        if (CurrentState == GameState.Liminal)
+        {
+            return;
+        }
 
-        GlobalState = targetState;
-        CurrentState = targetState;
-        inspectorCurrentState = targetState;
+        GameState targetState =
+            DayPhaseToGameState(dayPhase);
 
-        Debug.Log(">>> STATE SET TO: " + CurrentState);
+        if (targetState == CurrentState)
+        {
+            return;
+        }
 
-        StartCoroutine(InvokePhaseChangeNextFrame(targetState, wakeUpPosition));
+        ExecuteTransition(targetState);
     }
 
-    private IEnumerator InvokePhaseChangeNextFrame(GameState targetState, Transform wakeUpPosition)
+    private GameState DayPhaseToGameState(
+        DayPhase dayPhase
+    )
     {
-        yield return null; // 🔥 tunggu 1 frame supaya semua listener siap
+        return dayPhase == DayPhase.Night
+            ? GameState.Dream
+            : GameState.Awake;
+    }
+
+    // =============================================
+    // TRANSITION
+    // =============================================
+
+    private void ExecuteTransition(GameState targetState)
+    {
+        if (CurrentState == GameState.Dream &&
+            targetState == GameState.Awake)
+        {
+            currentLoop++;
+
+            Debug.Log(
+                $"[PhaseLoopManager] Loop ke-{currentLoop}"
+            );
+        }
+
+        GlobalState = targetState;
+
+        CurrentState = targetState;
+
+        inspectorCurrentState = targetState;
+
+        StartCoroutine(
+            InvokePhaseChangeNextFrame(targetState)
+        );
+    }
+
+    public void StartManualTransition(
+        GameState targetState,
+        Transform wakeUpPosition = null
+    )
+    {
+        Debug.Log(
+            ">>> MANUAL TRANSITION REQUEST: " +
+            targetState
+        );
+
+        GlobalState = targetState;
+
+        CurrentState = targetState;
+
+        inspectorCurrentState = targetState;
+
+        StartCoroutine(
+            InvokePhaseChangeNextFrame(
+                targetState,
+                wakeUpPosition
+            )
+        );
+    }
+
+    private IEnumerator InvokePhaseChangeNextFrame(
+        GameState targetState,
+        Transform wakeUpPosition = null
+    )
+    {
+        yield return null;
 
         OnPhaseChanged?.Invoke(CurrentState);
 
-        if (targetState == GameState.Confusion)
+        if (targetState == GameState.Liminal)
         {
-            if (useInSceneConfusionMinigame)
+            if (useInSceneLiminal)
             {
-                Debug.Log("Siklus di Fase 3: Menggunakan In-Scene Minigame (Tidak berpindah scene)");
+                Debug.Log("Enter Liminal");
+
+                if (liminalRoomManager != null)
+                {
+                    liminalRoomManager.EnterLiminal();
+                }
+
                 yield break;
             }
             else
             {
-                Debug.Log("LOADING SCENE: " + phase3SceneName);
-                SceneManager.LoadScene(phase3SceneName);
+                SceneManager.LoadScene(
+                    liminalSceneName
+                );
+
                 yield break;
             }
         }
 
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        GameObject player =
+            GameObject.FindGameObjectWithTag(
+                "Player"
+            );
 
         if (player != null)
         {
-            Debug.Log("PLAYER FOUND - TELEPORT");
-
             if (wakeUpPosition != null)
             {
-                player.transform.position = wakeUpPosition.position;
-                player.transform.rotation = wakeUpPosition.rotation;
+                player.transform.position =
+                    wakeUpPosition.position;
+
+                player.transform.rotation =
+                    wakeUpPosition.rotation;
             }
 
-            PlayerMovement move = player.GetComponent<PlayerMovement>();
+            PlayerMovement move =
+                player.GetComponent<PlayerMovement>();
+
             if (move != null)
             {
                 move.enabled = true;
             }
 
-            Collider2D col = player.GetComponent<Collider2D>();
+            Collider2D col =
+                player.GetComponent<Collider2D>();
+
             if (col != null)
             {
                 col.enabled = true;
@@ -139,51 +250,13 @@ public class PhaseLoopManager : MonoBehaviour
             Debug.LogWarning("PLAYER NOT FOUND");
         }
     }
-    private IEnumerator PhaseLoopRoutine()
+
+    private IEnumerator InvokePhaseChangedNextFrame(
+        GameState state
+    )
     {
-        while (autoLoopPhases)
-        {
-            yield return new WaitForSeconds(GetDuration(CurrentState));
+        yield return null;
 
-            TransitionToNext();
-
-            GlobalState = CurrentState;
-
-            StartCoroutine(InvokePhaseChangedNextFrame(CurrentState));
-        }
-    }
-    private IEnumerator InvokePhaseChangedNextFrame(GameState state)
-    {
-        yield return null; // tunggu 1 frame biar semua object sync
         OnPhaseChanged?.Invoke(state);
-    }
-    private float GetDuration(GameState state)
-    {
-        switch (state)
-        {
-            case GameState.Awake: return awakeDuration;
-            case GameState.Dream: return dreamDuration;
-            case GameState.Confusion: return confusionDuration;
-            default: return 10f;
-        }
-    }
-
-    private void TransitionToNext()
-    {
-        if (CurrentState == GameState.Awake)
-        {
-            CurrentState = GameState.Dream;
-        }
-        else if (CurrentState == GameState.Dream)
-        {
-            CurrentState = GameState.Awake;
-            currentLoop++;
-        }
-        else if (CurrentState == GameState.Confusion)
-        {
-            CurrentState = GameState.Awake;
-        }
-
-        Debug.Log("AUTO TRANSITION -> " + CurrentState);
     }
 }

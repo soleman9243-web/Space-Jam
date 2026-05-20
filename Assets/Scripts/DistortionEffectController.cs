@@ -101,7 +101,7 @@ public class DistortionEffectController : MonoBehaviour
 
     private void HandlePhaseChanged(GameState newState)
     {
-        if (newState == GameState.Confusion)
+        if (newState == GameState.Liminal)
         {
             TriggerGlitch(0.8f, 0.5f);
         }
@@ -182,7 +182,7 @@ public class DistortionEffectController : MonoBehaviour
         }
         else
         {
-            if (currentState == GameState.Confusion)
+            if (currentState == GameState.Liminal)
             {
                 baseDistortionWeight = 0.6f;
             }

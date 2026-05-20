@@ -7,64 +7,96 @@ public class TrashCleanupTask : BaseTask
 
     [Header("Spawn Area")]
     [SerializeField] private Vector2 minSpawnPosition;
-
     [SerializeField] private Vector2 maxSpawnPosition;
 
     [Header("Spawn Check")]
     [SerializeField] private LayerMask blockedLayer;
-
     [SerializeField] private float checkRadius = 0.5f;
-
     [SerializeField] private int maxSpawnAttempts = 50;
 
     [Header("Player")]
     [SerializeField] private Transform player;
-
     [SerializeField] private float minDistanceFromPlayer = 2f;
 
-    [Header("Quest")]
-    [SerializeField] private int targetTrash = 5;
+    [Header("Quest Scaling")]
+    [SerializeField] private int baseTargetTrash = 5;
+    [SerializeField] private int trashPerLoop = 2;
+    [SerializeField] private int maxTargetTrash = 20;
 
     [Header("Stability Reward")]
     [SerializeField] private float stabilityPerTrash = 2f;
-
     [SerializeField] private float stabilityCompleteBonus = 15f;
 
+    private int targetTrash;
     private int cleanedTrash;
-
     private TrashObject currentTrash;
+
+    private bool initialized;
+
+    private int GetCurrentLoop()
+    {
+        PhaseLoopManager pm = FindObjectOfType<PhaseLoopManager>();
+        return pm != null ? pm.currentLoop : 1;
+    }
 
     public override void ActivateTask()
     {
         base.ActivateTask();
 
+        if (initialized)
+        {
+            return;
+        }
+
+        initialized = true;
+
+        int loop = GetCurrentLoop();
+
+        targetTrash = Mathf.Min(
+            baseTargetTrash + (loop - 1) * trashPerLoop,
+            maxTargetTrash
+        );
+
         cleanedTrash = 0;
 
         UpdateTaskText();
-
         SpawnTrash();
+
+        Debug.Log($"[TrashTask] Loop {loop} ? Target: {targetTrash}");
     }
 
     public override void ResetTask()
     {
         base.ResetTask();
 
+        initialized = false;
         cleanedTrash = 0;
 
         if (currentTrash != null)
         {
             Destroy(currentTrash.gameObject);
+            currentTrash = null;
         }
+    }
+
+    public override void ForceStopTask()
+    {
+        if (currentTrash != null)
+        {
+            Destroy(currentTrash.gameObject);
+            currentTrash = null;
+        }
+
+        initialized = false;
+        DeactivateTask();
+
+        CompleteTask();
+
     }
 
     public void CleanTrash(TrashObject trash)
     {
-        if (!IsActive)
-        {
-            return;
-        }
-
-        if (trash != currentTrash)
+        if (!IsActive || trash != currentTrash)
         {
             return;
         }
@@ -72,29 +104,23 @@ public class TrashCleanupTask : BaseTask
         cleanedTrash++;
 
         Destroy(trash.gameObject);
+        currentTrash = null;
 
-        // reward kecil tiap sampah
         if (PlayerStatus.Instance != null)
         {
-            PlayerStatus.Instance.IncreaseStability(
-                stabilityPerTrash
-            );
+            PlayerStatus.Instance.IncreaseStability(stabilityPerTrash);
         }
 
         UpdateTaskText();
 
         if (cleanedTrash >= targetTrash)
         {
-            // bonus besar saat quest selesai
             if (PlayerStatus.Instance != null)
             {
-                PlayerStatus.Instance.IncreaseStability(
-                    stabilityCompleteBonus
-                );
+                PlayerStatus.Instance.IncreaseStability(stabilityCompleteBonus);
             }
 
             CompleteTask();
-
             return;
         }
 
@@ -103,25 +129,19 @@ public class TrashCleanupTask : BaseTask
 
     private void SpawnTrash()
     {
-        Vector2 spawnPosition;
-
-        bool found =
-            TryGetSpawnPosition(out spawnPosition);
-
-        if (!found)
+        if (currentTrash != null)
         {
-            Debug.LogWarning("Gagal menemukan posisi sampah");
+            Destroy(currentTrash.gameObject);
+            currentTrash = null;
+        }
 
+        if (!TryGetSpawnPosition(out Vector2 spawnPos))
+        {
+            Debug.LogWarning("Gagal spawn trash");
             return;
         }
 
-        currentTrash =
-            Instantiate(
-                trashPrefab,
-                spawnPosition,
-                Quaternion.identity
-            );
-
+        currentTrash = Instantiate(trashPrefab, spawnPos, Quaternion.identity);
         currentTrash.Setup(this);
     }
 
@@ -129,97 +149,37 @@ public class TrashCleanupTask : BaseTask
     {
         for (int i = 0; i < maxSpawnAttempts; i++)
         {
-            Vector2 randomPosition =
-                new Vector2(
-                    Random.Range(
-                        minSpawnPosition.x,
-                        maxSpawnPosition.x
-                    ),
-                    Random.Range(
-                        minSpawnPosition.y,
-                        maxSpawnPosition.y
-                    )
-                );
+            Vector2 rand = new Vector2(
+                Random.Range(minSpawnPosition.x, maxSpawnPosition.x),
+                Random.Range(minSpawnPosition.y, maxSpawnPosition.y)
+            );
 
-            bool blocked =
-                Physics2D.OverlapCircle(
-                    randomPosition,
-                    checkRadius,
-                    blockedLayer
-                );
-
-            if (blocked)
+            if (Physics2D.OverlapCircle(rand, checkRadius, blockedLayer))
             {
                 continue;
             }
 
-            float distance =
-                Vector2.Distance(
-                    randomPosition,
-                    player.position
-                );
-
-            if (distance < minDistanceFromPlayer)
+            if (Vector2.Distance(rand, player.position) < minDistanceFromPlayer)
             {
                 continue;
             }
 
-            position = randomPosition;
-
+            position = rand;
             return true;
         }
 
         position = Vector2.zero;
-
         return false;
     }
 
     private void UpdateTaskText()
     {
-        taskText =
-            "Clean Trash (" +
-            cleanedTrash +
-            "/" +
-            targetTrash +
-            ")";
+        taskText = $"Clean Trash ({cleanedTrash}/{targetTrash})";
 
-        PhaseTaskManager taskManager =
-            FindObjectOfType<PhaseTaskManager>();
-
-        if (taskManager != null)
+        PhaseTaskManager tm = FindObjectOfType<PhaseTaskManager>();
+        if (tm != null)
         {
-            taskManager.UpdateObjectiveUI();
-        }
-    }
-
-    private void OnDrawGizmosSelected()
-    {
-        // area spawn
-        Gizmos.color = Color.green;
-
-        Vector2 center =
-            (minSpawnPosition + maxSpawnPosition) / 2f;
-
-        Vector2 size =
-            maxSpawnPosition - minSpawnPosition;
-
-        Gizmos.DrawWireCube(center, size);
-
-        // radius check preview
-        Gizmos.color = Color.yellow;
-
-        Gizmos.DrawWireSphere(minSpawnPosition, checkRadius);
-        Gizmos.DrawWireSphere(maxSpawnPosition, checkRadius);
-
-        // player distance preview
-        if (player != null)
-        {
-            Gizmos.color = Color.red;
-
-            Gizmos.DrawWireSphere(
-                player.position,
-                minDistanceFromPlayer
-            );
+            tm.UpdateObjectiveUI();
         }
     }
 }

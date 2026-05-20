@@ -16,18 +16,30 @@ public class TVRepairMinigame : BaseTask
     [SerializeField] private MonoBehaviour playerMovement;
     [SerializeField] private PlayerInteract2D playerInteract;
 
-    [Header("Signal")]
-    [SerializeField] private float signalSpeed = 220f;
-    [SerializeField] private float signalRange = 400f;
+    [Header("Signal Base")]
+    [SerializeField] private float baseSignalSpeed = 220f;
+    [SerializeField] private float signalSpeedPerLoop = 25f;
+    [SerializeField] private float maxSignalSpeed = 500f;
 
-    [Header("Safe Zone")]
-    [SerializeField] private float zoneSpeed = 300f;
-    [SerializeField] private float zoneRange = 400f;
+    [Header("Safe Zone Base")]
+    [SerializeField] private float baseZoneSpeed = 300f;
+    [SerializeField] private float zoneSpeedPerLoop = 10f;
+    [SerializeField] private float maxZoneSpeed = 450f;
 
-    [Header("Progress Balance")]
+    [Header("Progress Balance Base")]
     [SerializeField] private float startProgress = 0.25f;
-    [SerializeField] private float gainSpeed = 0.35f;
-    [SerializeField] private float lossSpeed = 0.15f;
+    [SerializeField] private float baseGainSpeed = 0.35f;
+    [SerializeField] private float baseLossSpeed = 0.15f;
+    [SerializeField] private float lossSpeedPerLoop = 0.04f;
+    [SerializeField] private float maxLossSpeed = 0.55f;
+
+    // Runtime values (set saat OpenPuzzle)
+    private float signalSpeed;
+    private float zoneSpeed;
+    private float signalRange;
+    private float zoneRange;
+    private float gainSpeed;
+    private float lossSpeed;
 
     private bool isActive;
     private bool resolving;
@@ -42,21 +54,30 @@ public class TVRepairMinigame : BaseTask
     private void Start()
     {
         puzzleUI.SetActive(false);
-
         parentRect = signalBar.parent as RectTransform;
-        signalRange = parentRect.rect.width * 0.5f;
-        zoneRange = signalRange;
-
         UpdateUI();
         UpdateProgressText();
     }
 
+    private int GetCurrentLoop()
+    {
+        PhaseLoopManager pm = FindObjectOfType<PhaseLoopManager>();
+        return pm != null ? pm.currentLoop : 1;
+    }
+
     public void OpenPuzzle()
     {
-        if (completed)
-        {
-            return;
-        }
+        if (completed) return;
+
+        // Scale dari loop
+        int loop = GetCurrentLoop();
+        signalSpeed = Mathf.Min(baseSignalSpeed + (loop - 1) * signalSpeedPerLoop, maxSignalSpeed);
+        zoneSpeed = Mathf.Min(baseZoneSpeed + (loop - 1) * zoneSpeedPerLoop, maxZoneSpeed);
+        gainSpeed = baseGainSpeed;
+        lossSpeed = Mathf.Min(baseLossSpeed + (loop - 1) * lossSpeedPerLoop, maxLossSpeed);
+
+        signalRange = parentRect.rect.width * 0.5f;
+        zoneRange = signalRange;
 
         isActive = true;
         puzzleUI.SetActive(true);
@@ -69,184 +90,137 @@ public class TVRepairMinigame : BaseTask
 
         playerMovement.enabled = false;
         playerInteract.canInteract = false;
+
+        Debug.Log($"[TVRepair] Loop {loop} ? SignalSpeed:{signalSpeed:F0} LossSpeed:{lossSpeed:F2}");
     }
 
     private void Update()
     {
-        if (!isActive)
-        {
-            return;
-        }
+        if (!isActive) return;
 
         MoveSignal();
         MoveSafeZone();
         CheckMatch();
     }
 
-    // ======================
-    // SIGNAL AI (BOUNCE RANDOM)
-    // ======================
     private void MoveSignal()
     {
         Vector2 pos = signalBar.anchoredPosition;
-
         pos.x += signalDir * signalSpeed * Time.deltaTime;
 
-        if (pos.x > signalRange)
-        {
-            signalDir = -1f;
-        }
-        else if (pos.x < -signalRange)
-        {
-            signalDir = 1f;
-        }
+        if (pos.x > signalRange) signalDir = -1f;
+        else if (pos.x < -signalRange) signalDir = 1f;
 
         signalBar.anchoredPosition = pos;
     }
 
-    // ======================
-    // SAFE ZONE (PLAYER CONTROL)
-    // ======================
     private void MoveSafeZone()
     {
         Vector2 pos = safeZone.anchoredPosition;
 
-        if (Input.GetKey(KeyCode.Space))
-        {
-            pos.x += zoneSpeed * Time.deltaTime;
-        }
-        else
-        {
-            pos.x -= zoneSpeed * Time.deltaTime * 0.6f;
-        }
+        pos.x = Input.GetKey(KeyCode.Space)
+            ? pos.x + zoneSpeed * Time.deltaTime
+            : pos.x - zoneSpeed * Time.deltaTime * 0.6f;
 
         pos.x = Mathf.Clamp(pos.x, -zoneRange, zoneRange);
-
         safeZone.anchoredPosition = pos;
     }
 
-    // ======================
-    // CORE STABILITY SYSTEM
-    // ======================
     private void CheckMatch()
     {
-        if (resolving)
-        {
-            return;
-        }
+        if (resolving) return;
 
         float signalX = signalBar.anchoredPosition.x;
         float zoneX = safeZone.anchoredPosition.x;
-        float zoneWidth = safeZone.rect.width * 0.5f;
+        float zoneHalf = safeZone.rect.width * 0.5f;
 
-        bool inside = Mathf.Abs(signalX - zoneX) <= zoneWidth;
+        bool inside = Mathf.Abs(signalX - zoneX) <= zoneHalf;
 
-        if (inside)
-        {
-            progress += gainSpeed * Time.deltaTime;
-        }
-        else
-        {
-            progress -= lossSpeed * Time.deltaTime;
-        }
-
+        progress += (inside ? gainSpeed : -lossSpeed) * Time.deltaTime;
         progress = Mathf.Clamp01(progress);
 
         UpdateUI();
 
-        if (progress <= 0f)
-        {
-            StartCoroutine(FailStageRoutine());
-        }
-        else if (progress >= 1f)
-        {
-            StartCoroutine(NextStageRoutine());
-        }
+        if (progress <= 0f) StartCoroutine(FailStageRoutine());
+        else if (progress >= 1f) StartCoroutine(NextStageRoutine());
     }
 
     private IEnumerator NextStageRoutine()
     {
         resolving = true;
-
         stage++;
-
         UpdateProgressText();
 
         yield return new WaitForSeconds(0.2f);
 
-        // ?? NEW: reward stability tiap stage sukses
         if (PlayerStatus.Instance != null)
-        {
             PlayerStatus.Instance.IncreaseStability(5f);
-        }
 
         if (stage >= maxStage)
         {
             CompleteTask();
-
-            // ?? bonus reward kalau full clear
             if (PlayerStatus.Instance != null)
-            {
                 PlayerStatus.Instance.IncreaseStability(10f);
-            }
-
             ClosePuzzle();
             yield break;
         }
 
         progress = startProgress;
-
-        UpdateUI();
-
         resolving = false;
+        UpdateUI();
     }
 
     private IEnumerator FailStageRoutine()
     {
         resolving = true;
-
-        // ? tidak ulang stage lagi
         stage = Mathf.Max(0, stage - 1);
-
         progress = startProgress * 0.8f;
 
         UpdateProgressText();
         UpdateUI();
 
-        // ?? NEW: langsung kena stability damage
         if (PlayerStatus.Instance != null)
-        {
             PlayerStatus.Instance.ReduceStability(8f);
-        }
 
         yield return new WaitForSeconds(0.2f);
-
         resolving = false;
     }
+
     private void ClosePuzzle()
     {
         isActive = false;
         puzzleUI.SetActive(false);
-
         playerMovement.enabled = true;
         playerInteract.canInteract = true;
     }
 
-    private void UpdateUI()
+    private void UpdateUI() { if (progressBar != null) progressBar.value = progress; }
+    private void UpdateProgressText() { if (progressText != null) progressText.text = stage + " / " + maxStage; }
+    public override void ForceStopTask()
     {
-        if (progressBar != null)
-        {
-            progressBar.value = progress;
-        }
-    }
+        StopAllCoroutines();
 
-    private void UpdateProgressText()
-    {
-        if (progressText == null)
+        isActive = false;
+        resolving = false;
+
+        progress = 0f;
+        stage = 0;
+
+        if (puzzleUI != null)
         {
-            return;
+            puzzleUI.SetActive(false);
         }
 
-        progressText.text = stage + " / " + maxStage;
+        if (playerMovement != null)
+        {
+            playerMovement.enabled = true;
+        }
+
+        if (playerInteract != null)
+        {
+            playerInteract.canInteract = true;
+        }
+
+        DeactivateTask();
     }
 }

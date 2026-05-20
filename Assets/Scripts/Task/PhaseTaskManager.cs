@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using static UnityEditorInternal.VersionControl.ListControl;
 
 public class PhaseTaskManager : MonoBehaviour
 {
@@ -10,18 +11,17 @@ public class PhaseTaskManager : MonoBehaviour
 
     private List<BaseTask> currentTasks;
 
-    public BedInteract bed;
-
     [Header("UI")]
     [SerializeField] private TextMeshProUGUI objectiveText;
 
     public PhaseLoopManager phaseManager;
 
+    private GameState lastState;
     private IEnumerator Start()
     {
-        yield return null; // tunggu semua Awake selesai
+        yield return null;
 
-
+        lastState = phaseManager.CurrentState;
         if (phaseManager != null)
         {
             phaseManager.OnPhaseChanged.AddListener(OnPhaseChanged);
@@ -37,32 +37,30 @@ public class PhaseTaskManager : MonoBehaviour
             return;
         }
 
-        if (state != phaseManager.CurrentState)
-        {
-            return;
-        }
-
-        // If transitioning to Confusion, do not reset tasks, just temporarily deactivate the active one!
-        if (state == GameState.Confusion)
+        // LIMINAL
+        if (state == GameState.Liminal)
         {
             if (currentTasks != null && currentTasks.Count > 0)
             {
-                currentTasks[0].DeactivateTask();
+                currentTasks[0].ForceStopTask();
             }
+
+            lastState = state;
             return;
         }
 
-        // If transitioning back to Dream from Confusion, resume the current tasks!
-        if (state == GameState.Dream && currentTasks != null && currentTasks.Count > 0)
+        // RETURN FROM LIMINAL ONLY
+        if (lastState == GameState.Liminal && state != GameState.Liminal)
         {
-            currentTasks[0].ActivateTask();
-            UpdateObjectiveUI();
+            SetupTasks();
+            lastState = state;
             return;
         }
 
+        // NORMAL PHASE SWITCH (Awake ? Dream)
         SetupTasks();
+        lastState = state;
     }
-
     public void SetupTasks()
     {
         if (phaseManager == null)
@@ -75,7 +73,7 @@ public class PhaseTaskManager : MonoBehaviour
 
         GameState state = phaseManager.CurrentState;
 
-        // STOP semua task aktif dulu
+        // reset semua task biar clean setiap switch phase
         foreach (var task in awakeTasks)
         {
             task.DeactivateTask();
@@ -88,6 +86,7 @@ public class PhaseTaskManager : MonoBehaviour
             task.ResetTask();
         }
 
+        // assign task sesuai phase
         if (state == GameState.Awake)
         {
             currentTasks.AddRange(awakeTasks);
@@ -99,20 +98,14 @@ public class PhaseTaskManager : MonoBehaviour
 
         ShuffleTasks();
 
-        bed.canSleep = false;
-
         if (currentTasks.Count > 0)
         {
             currentTasks[0].ActivateTask();
         }
-        else
-        {
-            bed.canSleep = true;
-        }
 
         UpdateObjectiveUI();
 
-        Debug.Log("TASK RESET COMPLETE: " + state);
+        Debug.Log("[PhaseTaskManager] TASK SETUP: " + state);
     }
 
     public void CompleteTask(BaseTask task)
@@ -123,22 +116,40 @@ public class PhaseTaskManager : MonoBehaviour
         }
 
         currentTasks.Remove(task);
-
         UpdateObjectiveUI();
 
         if (currentTasks.Count <= 0)
         {
-            bed.canSleep = true;
-
-            if (objectiveText != null)
-            {
-                objectiveText.text = "Go to bed";
-            }
-
+            LoopCurrentPhaseTasks();
             return;
         }
 
         currentTasks[0].ActivateTask();
+    }
+
+    private void LoopCurrentPhaseTasks()
+    {
+        GameState state = phaseManager.CurrentState;
+
+        List<BaseTask> source =
+            state == GameState.Awake ? awakeTasks : dreamTasks;
+
+        foreach (var task in source)
+        {
+            task.DeactivateTask();
+            task.ResetTask();
+        }
+
+        currentTasks = new List<BaseTask>(source);
+
+        ShuffleTasks();
+
+        if (currentTasks.Count > 0)
+        {
+            currentTasks[0].ActivateTask();
+        }
+
+        UpdateObjectiveUI();
     }
 
     public void ForceActivateTask(BaseTask task)
@@ -148,24 +159,17 @@ public class PhaseTaskManager : MonoBehaviour
             currentTasks = new List<BaseTask>();
         }
 
-        // Deactivate currently active task
         if (currentTasks.Count > 0)
         {
             currentTasks[0].DeactivateTask();
         }
 
-        // Ensure this task is in the list and moved to the front
         currentTasks.Remove(task);
         currentTasks.Insert(0, task);
 
-        // Activate it!
         task.ActivateTask();
+
         UpdateObjectiveUI();
-        
-        // Ensure bed is locked since we have active tasks
-        bed.canSleep = false;
-        
-        Debug.Log("[PhaseTaskManager] Force activated task: " + task.taskText);
     }
 
     public void UpdateObjectiveUI()
@@ -175,13 +179,10 @@ public class PhaseTaskManager : MonoBehaviour
             return;
         }
 
-        if (currentTasks == null || currentTasks.Count <= 0)
-        {
-            objectiveText.text = "";
-            return;
-        }
-
-        objectiveText.text = currentTasks[0].taskText;
+        objectiveText.text =
+            (currentTasks == null || currentTasks.Count == 0)
+            ? ""
+            : currentTasks[0].GetTaskText();
     }
 
     private void ShuffleTasks()

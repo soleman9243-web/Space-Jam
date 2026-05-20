@@ -104,7 +104,7 @@ namespace SpaceJam.Minigames
 
         private void OnPhaseChanged(GameState state)
         {
-            if (state == GameState.Confusion)
+            if (state == GameState.Liminal)
             {
                 if (!isMinigameActive)
                 {
@@ -307,7 +307,7 @@ namespace SpaceJam.Minigames
             {
                 if (phaseLoopManager != null)
                 {
-                    phaseLoopManager.StartManualTransition(GameState.Confusion);
+                    phaseLoopManager.StartManualTransition(GameState.Liminal);
                 }
                 else
                 {

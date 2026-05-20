@@ -16,8 +16,9 @@ public class EnemyDashSpawner : MonoBehaviour
     [SerializeField] private Transform player;
     [SerializeField] private GameObject warningTrackPrefab;
     [SerializeField] private GameObject dashEnemyPrefab;
+    [SerializeField] private EnemyDifficultyController difficultyController;
 
-    [Header("Runtime Settings (controlled by Difficulty)")]
+    [Header("Settings")]
     [SerializeField] private int trackCount = 1;
     [SerializeField] private float dashSpeed = 20f;
     [SerializeField] private float spawnCooldown = 2f;
@@ -28,8 +29,12 @@ public class EnemyDashSpawner : MonoBehaviour
     [SerializeField] private float spacing = 2f;
     [SerializeField] private float spawnOffset = 12f;
 
-    private List<GameObject> currentTracks = new List<GameObject>();
-    private DashDirection currentDirection;
+    private readonly List<GameObject> currentTracks = new();
+
+    private bool canSpawn;
+    private bool infiniteMode;
+
+    private bool isPatternActive;
 
     private void Start()
     {
@@ -40,27 +45,48 @@ public class EnemyDashSpawner : MonoBehaviour
     {
         while (true)
         {
-            if (!canSpawn)
+            if (!canSpawn && !infiniteMode)
             {
                 yield return null;
                 continue;
             }
 
-            yield return SpawnAttack();
+            yield return SpawnAttackCycle();
             yield return new WaitForSeconds(spawnCooldown);
         }
     }
 
-    private IEnumerator SpawnAttack()
+    private IEnumerator SpawnAttackCycle()
     {
-        currentDirection = (DashDirection)Random.Range(0, 4);
+        if (isPatternActive)
+        {
+            yield break;
+        }
 
-        currentTracks.Clear();
+        isPatternActive = true;
+
+        int patternCount = difficultyController != null
+            ? difficultyController.GetPatternCount()
+            : 1;
+
+        for (int i = 0; i < patternCount; i++)
+        {
+            DashDirection dir = (DashDirection)Random.Range(0, 4);
+            yield return SpawnSinglePattern(dir);
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        isPatternActive = false;
+    }
+
+    private IEnumerator SpawnSinglePattern(DashDirection dir)
+    {
+        ClearTracks();
 
         for (int i = 0; i < trackCount; i++)
         {
             GameObject track = Instantiate(warningTrackPrefab);
-            SetupTrackRotation(track);
+            SetupTrackRotation(track, dir);
             currentTracks.Add(track);
         }
 
@@ -68,24 +94,18 @@ public class EnemyDashSpawner : MonoBehaviour
 
         while (timer < followDuration)
         {
-            FollowPlayer();
+            FollowPlayer(dir);
             timer += Time.deltaTime;
             yield return null;
         }
 
         yield return new WaitForSeconds(lockDuration);
 
-        SpawnEnemies();
-
-        FindObjectOfType<EnemyWaveController>()?.RegisterWaveComplete();
-
-        foreach (var t in currentTracks)
-        {
-            Destroy(t);
-        }
+        SpawnEnemies(dir);
+        ClearTracks();
     }
 
-    private void FollowPlayer()
+    private void FollowPlayer(DashDirection dir)
     {
         Vector3 p = player.position;
 
@@ -93,84 +113,94 @@ public class EnemyDashSpawner : MonoBehaviour
         {
             float offset = (i - (trackCount - 1) / 2f) * spacing;
 
-            switch (currentDirection)
+            if (dir == DashDirection.UpToDown ||
+                dir == DashDirection.DownToUp)
             {
-                case DashDirection.UpToDown:
-                case DashDirection.DownToUp:
-
-                    currentTracks[i].transform.position = new Vector3(p.x + offset, 0f, 0f);
-                    break;
-
-                case DashDirection.LeftToRight:
-                case DashDirection.RightToLeft:
-
-                    currentTracks[i].transform.position = new Vector3(0f, p.y + offset, 0f);
-                    break;
+                currentTracks[i].transform.position =
+                    new Vector3(p.x + offset, 0f, 0f);
+            }
+            else
+            {
+                currentTracks[i].transform.position =
+                    new Vector3(0f, p.y + offset, 0f);
             }
         }
     }
 
-    private void SetupTrackRotation(GameObject track)
+    private void SetupTrackRotation(GameObject track, DashDirection dir)
     {
-        if (currentDirection == DashDirection.UpToDown ||
-            currentDirection == DashDirection.DownToUp)
-        {
-            track.transform.rotation = Quaternion.Euler(0, 0, 90);
-        }
-        else
-        {
-            track.transform.rotation = Quaternion.identity;
-        }
+        track.transform.rotation =
+            (dir == DashDirection.UpToDown ||
+             dir == DashDirection.DownToUp)
+            ? Quaternion.Euler(0, 0, 90)
+            : Quaternion.identity;
     }
 
-    private void SpawnEnemies()
+    private void SpawnEnemies(DashDirection dir)
     {
         foreach (var track in currentTracks)
         {
-            Vector2 spawnPos = Vector2.zero;
-            Vector2 dir = Vector2.zero;
+            if (track == null)
+            {
+                continue;
+            }
 
-            switch (currentDirection)
+            Vector2 spawnPos = Vector2.zero;
+            Vector2 spawnDir = Vector2.zero;
+
+            switch (dir)
             {
                 case DashDirection.UpToDown:
                     spawnPos = new Vector2(track.transform.position.x, spawnOffset);
-                    dir = Vector2.down;
+                    spawnDir = Vector2.down;
                     break;
 
                 case DashDirection.DownToUp:
                     spawnPos = new Vector2(track.transform.position.x, -spawnOffset);
-                    dir = Vector2.up;
+                    spawnDir = Vector2.up;
                     break;
 
                 case DashDirection.LeftToRight:
                     spawnPos = new Vector2(-spawnOffset, track.transform.position.y);
-                    dir = Vector2.right;
+                    spawnDir = Vector2.right;
                     break;
 
                 case DashDirection.RightToLeft:
                     spawnPos = new Vector2(spawnOffset, track.transform.position.y);
-                    dir = Vector2.left;
+                    spawnDir = Vector2.left;
                     break;
             }
 
             GameObject enemy = Instantiate(dashEnemyPrefab, spawnPos, Quaternion.identity);
-
-            enemy.GetComponent<DashEnemy>().Initialize(dir, dashSpeed);
+            enemy.GetComponent<DashEnemy>().Initialize(spawnDir, dashSpeed);
         }
     }
-    private bool canSpawn = false;
 
-    public void StartSpawning()
+    private void ClearTracks()
     {
-        canSpawn = true;
+        for (int i = 0; i < currentTracks.Count; i++)
+        {
+            if (currentTracks[i] != null)
+            {
+                Destroy(currentTracks[i]);
+            }
+        }
+
+        currentTracks.Clear();
     }
+
+    public void StartSpawning() => canSpawn = true;
 
     public void StopSpawning()
     {
         canSpawn = false;
+        infiniteMode = false;
+        isPatternActive = false;
+        ClearTracks();
     }
 
-    // ===== Difficulty API =====
+    public void SetInfiniteMode(bool v) => infiniteMode = v;
+
     public void SetTrackCount(int v) => trackCount = v;
     public void SetDashSpeed(float v) => dashSpeed = v;
     public void SetSpawnCooldown(float v) => spawnCooldown = v;

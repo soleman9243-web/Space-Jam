@@ -23,7 +23,7 @@ namespace SpaceJam.Environment
         
         [Tooltip("Current time of day represented as a value between 0.0 (midnight) and 1.0 (next midnight).")]
         [Range(0f, 1f)]
-        [SerializeField] private float timeOfDay = 0.25f; // Starts at 6 AM (0.25)
+        [SerializeField] private float timeOfDay = 0.35f; // Starts at 6 AM (0.25)
         
         [Tooltip("If true, the cycle will advance automatically over time.")]
         [SerializeField] private bool autoAdvance = true;
@@ -118,7 +118,7 @@ namespace SpaceJam.Environment
             // Handle testing inputs in PlayMode
             if (Application.isPlaying)
             {
-                HandleDebugInputs();
+                //HandleDebugInputs();
             }
         }
 

@@ -37,6 +37,17 @@ public class LaptopQTE : MonoBehaviour
     [Tooltip("Suara yang dimainkan saat salah pencet")]
     public AudioClip errorSound;
 
+    [Header("Random QTE (Fase 2)")]
+    [Tooltip("Jika dicentang, QTE akan terpicu secara acak khusus di Fase 2 (Dream)")]
+    public bool enableRandomTriggers = true;
+    [Tooltip("Waktu minimum jeda antar pemicuan acak (dalam detik)")]
+    public float minTimeBetweenTriggers = 10f;
+    [Tooltip("Waktu maksimum jeda antar pemicuan acak (dalam detik)")]
+    public float maxTimeBetweenTriggers = 25f;
+
+    private PhaseLoopManager phaseLoopManager;
+    private Coroutine randomQTECoroutine;
+
     private List<KeyCode> currentSequence = new List<KeyCode>();
     private int currentKeyIndex = 0;
     private float timeRemaining;
@@ -57,6 +68,63 @@ public class LaptopQTE : MonoBehaviour
         // Otomatis matikan UI saat game baru mulai
         if (laptopUIPanel != null) laptopUIPanel.SetActive(false);
         if (overloadPanel != null) overloadPanel.SetActive(false);
+
+        // Cari PhaseLoopManager di scene
+        phaseLoopManager = FindObjectOfType<PhaseLoopManager>();
+        if (phaseLoopManager != null)
+        {
+            phaseLoopManager.OnPhaseChanged.AddListener(OnPhaseChanged);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (phaseLoopManager != null)
+        {
+            phaseLoopManager.OnPhaseChanged.RemoveListener(OnPhaseChanged);
+        }
+    }
+
+    private void OnPhaseChanged(GameState newState)
+    {
+        if (!enableRandomTriggers) return;
+
+        if (newState == GameState.Dream)
+        {
+            if (randomQTECoroutine != null) StopCoroutine(randomQTECoroutine);
+            randomQTECoroutine = StartCoroutine(RandomQTERoutine());
+        }
+        else
+        {
+            if (randomQTECoroutine != null)
+            {
+                StopCoroutine(randomQTECoroutine);
+                randomQTECoroutine = null;
+            }
+            
+            // Tutup QTE jika sedang aktif saat berganti fase
+            if (isMinigameActive)
+            {
+                isMinigameActive = false;
+                if (laptopUIPanel != null) laptopUIPanel.SetActive(false);
+                if (playerMovement != null) playerMovement.enabled = true;
+            }
+        }
+    }
+
+    private IEnumerator RandomQTERoutine()
+    {
+        while (phaseLoopManager != null && phaseLoopManager.CurrentState == GameState.Dream)
+        {
+            float waitTime = Random.Range(minTimeBetweenTriggers, maxTimeBetweenTriggers);
+            yield return new WaitForSeconds(waitTime);
+
+            if (phaseLoopManager.CurrentState == GameState.Dream && !isMinigameActive && !isOverloading)
+            {
+                Debug.Log("[LaptopQTE] Triggering Random QTE in Dream Phase!");
+                StartMinigame();
+            }
+        }
     }
 
     void Update()

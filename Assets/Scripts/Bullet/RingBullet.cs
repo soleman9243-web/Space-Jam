@@ -102,6 +102,9 @@ public class RingBullet : MonoBehaviour
 
     private void OnTriggerExit2D(Collider2D other)
     {
+        // Safety check to prevent coroutine activation errors if the bullet is being deactivated/cleaned up
+        if (!gameObject.activeInHierarchy) return;
+
         if (other.CompareTag("Ring"))
         {
             isDetached = true;

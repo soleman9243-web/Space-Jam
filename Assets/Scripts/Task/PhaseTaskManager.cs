@@ -42,6 +42,24 @@ public class PhaseTaskManager : MonoBehaviour
             return;
         }
 
+        // If transitioning to Confusion, do not reset tasks, just temporarily deactivate the active one!
+        if (state == GameState.Confusion)
+        {
+            if (currentTasks != null && currentTasks.Count > 0)
+            {
+                currentTasks[0].DeactivateTask();
+            }
+            return;
+        }
+
+        // If transitioning back to Dream from Confusion, resume the current tasks!
+        if (state == GameState.Dream && currentTasks != null && currentTasks.Count > 0)
+        {
+            currentTasks[0].ActivateTask();
+            UpdateObjectiveUI();
+            return;
+        }
+
         SetupTasks();
     }
 
@@ -121,6 +139,33 @@ public class PhaseTaskManager : MonoBehaviour
         }
 
         currentTasks[0].ActivateTask();
+    }
+
+    public void ForceActivateTask(BaseTask task)
+    {
+        if (currentTasks == null)
+        {
+            currentTasks = new List<BaseTask>();
+        }
+
+        // Deactivate currently active task
+        if (currentTasks.Count > 0)
+        {
+            currentTasks[0].DeactivateTask();
+        }
+
+        // Ensure this task is in the list and moved to the front
+        currentTasks.Remove(task);
+        currentTasks.Insert(0, task);
+
+        // Activate it!
+        task.ActivateTask();
+        UpdateObjectiveUI();
+        
+        // Ensure bed is locked since we have active tasks
+        bed.canSleep = false;
+        
+        Debug.Log("[PhaseTaskManager] Force activated task: " + task.taskText);
     }
 
     public void UpdateObjectiveUI()

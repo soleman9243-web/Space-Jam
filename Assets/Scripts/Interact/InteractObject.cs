@@ -6,12 +6,12 @@ using UnityEngine.Events;
 public class InteractObject2D : MonoBehaviour
 {
     [Header("Task Lock")]
-    [SerializeField] private bool requireActiveTask;
+    public bool requireActiveTask;
 
-    [SerializeField] private BaseTask linkedTask;
+    public BaseTask linkedTask;
 
     [Header("Events")]
-    public UnityEvent onInteract;
+    public UnityEvent onInteract = new UnityEvent();
 
     public void Interact()
     {

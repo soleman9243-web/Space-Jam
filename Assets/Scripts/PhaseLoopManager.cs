@@ -13,6 +13,7 @@ public enum GameState
 public class PhaseLoopManager : MonoBehaviour
 {
     public bool autoLoopPhases = false;
+    public bool useInSceneConfusionMinigame = true;
 
     public int currentLoop = 1;
 
@@ -96,9 +97,17 @@ public class PhaseLoopManager : MonoBehaviour
 
         if (targetState == GameState.Confusion)
         {
-            Debug.Log("LOADING SCENE: " + phase3SceneName);
-            SceneManager.LoadScene(phase3SceneName);
-            yield break;
+            if (useInSceneConfusionMinigame)
+            {
+                Debug.Log("Siklus di Fase 3: Menggunakan In-Scene Minigame (Tidak berpindah scene)");
+                yield break;
+            }
+            else
+            {
+                Debug.Log("LOADING SCENE: " + phase3SceneName);
+                SceneManager.LoadScene(phase3SceneName);
+                yield break;
+            }
         }
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");

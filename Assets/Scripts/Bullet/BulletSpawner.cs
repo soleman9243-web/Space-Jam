@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class BulletSpawner : MonoBehaviour
@@ -9,26 +7,28 @@ public class BulletSpawner : MonoBehaviour
 
     [Header("Ring Settings")]
     [SerializeField] private int count = 12;
+
     [SerializeField] private float spawnDistance = 10f;
 
     [Header("Reference")]
     [SerializeField] private PlayerMovement player;
 
-    private void Update()
+    private int ringIndex;
+
+    private void Start()
     {
-        if (Input.GetKeyDown(KeyCode.B))
-        {
-            SpawnRing();
-        }
+        SpawnRing();
     }
 
-    private void SpawnRing()
+    public void SpawnRing()
     {
         float angleStep = 360f / count;
 
+        float rotationOffset = (angleStep * 0.5f) * ringIndex;
+
         for (int i = 0; i < count; i++)
         {
-            float angle = i * angleStep;
+            float angle = (i * angleStep) + rotationOffset;
             float rad = angle * Mathf.Deg2Rad;
 
             Vector2 spawnPos = new Vector2(
@@ -42,6 +42,12 @@ public class BulletSpawner : MonoBehaviour
 
             bullet.SetDirection(dirToCenter);
             bullet.SetPlayer(player);
+            bullet.SetSpawner(this);
+
+            // cuma bullet pertama yang boleh spawn next ring
+            bullet.SetCanSpawnNextRing(i == 0);
         }
+
+        ringIndex++;
     }
 }

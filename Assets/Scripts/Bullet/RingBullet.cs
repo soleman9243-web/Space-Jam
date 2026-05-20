@@ -12,6 +12,7 @@ public class RingBullet : MonoBehaviour
 
     [Header("Movement")]
     [SerializeField] private float moveSpeedIn = 4f;
+
     [SerializeField] private float moveSpeedOut = 8f;
 
     [Header("Reaction")]
@@ -24,9 +25,13 @@ public class RingBullet : MonoBehaviour
     private BulletState state;
 
     private PlayerMovement player;
-    private bool isPlayerMoving;
+    private BulletSpawner spawner;
 
+    private bool isPlayerMoving;
     private bool isDetached;
+
+    private bool canSpawnNextRing;
+
     private float currentOutSpeed;
 
     private void Start()
@@ -44,6 +49,16 @@ public class RingBullet : MonoBehaviour
     {
         player = p;
         player.OnMovementChanged += HandlePlayerMove;
+    }
+
+    public void SetSpawner(BulletSpawner s)
+    {
+        spawner = s;
+    }
+
+    public void SetCanSpawnNextRing(bool value)
+    {
+        canSpawnNextRing = value;
     }
 
     private void Update()
@@ -92,6 +107,12 @@ public class RingBullet : MonoBehaviour
             isDetached = true;
             state = BulletState.MovingOut;
 
+            // cuma 1 bullet yang trigger
+            if (canSpawnNextRing && spawner != null)
+            {
+                spawner.SpawnRing();
+            }
+
             StartCoroutine(Despawn());
         }
     }
@@ -99,6 +120,7 @@ public class RingBullet : MonoBehaviour
     private IEnumerator Despawn()
     {
         yield return new WaitForSeconds(despawnDelay);
+
         Destroy(gameObject);
     }
 

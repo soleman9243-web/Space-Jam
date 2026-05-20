@@ -20,6 +20,11 @@ public class PlayerStatus : MonoBehaviour
     [SerializeField] private Rigidbody2D rb;
     [SerializeField] private float deathDelay = 2f;
 
+    [Header("Drain")]
+    [SerializeField] private float awakeDrainPerSecond = 1f;
+
+    [SerializeField] private float dreamDrainPerSecond = 3f;
+
     public bool isDead = false;
 
     void Awake()
@@ -38,9 +43,24 @@ public class PlayerStatus : MonoBehaviour
     void Update()
     {
         Stability();
-        Test();
+        DrainStability();
     }
+    private void DrainStability()
+    {
+        if (isDead)
+        {
+            return;
+        }
 
+        float drain = awakeDrainPerSecond;
+
+        if (PhaseLoopManager.GlobalState == GameState.Dream)
+        {
+            drain = dreamDrainPerSecond;
+        }
+
+        stability -= drain * Time.deltaTime;
+    }
     void Test()
     {
         if (Input.GetKeyUp(KeyCode.P))

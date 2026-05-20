@@ -4,6 +4,13 @@ using UnityEngine;
 
 public class RandomWASDRotate : MonoBehaviour
 {
+    public enum Difficulty
+    {
+        Easy,
+        Medium,
+        Hard
+    }
+
     [Header("Room")]
     [SerializeField] private Transform roomRoot;
 
@@ -14,7 +21,15 @@ public class RandomWASDRotate : MonoBehaviour
     [SerializeField] private float rotateAngle = 90f;
     [SerializeField] private float rotateSpeed = 200f;
 
-    private bool isBusy;
+    [Header("Difficulty")]
+    [SerializeField] private Difficulty difficulty = Difficulty.Medium;
+
+    [SerializeField] private float easyRotateDelay = 5f;
+    [SerializeField] private float mediumRotateDelay = 3f;
+    [SerializeField] private float hardRotateDelay = 1.5f;
+
+    [Header("Phase")]
+    [SerializeField] private PhaseLoopManager phaseManager;
 
     private Dictionary<KeyCode, Vector3> keyMapping;
 
@@ -29,45 +44,70 @@ public class RandomWASDRotate : MonoBehaviour
     private void Start()
     {
         GenerateRandomMapping();
+
+        if (phaseManager == null)
+        {
+            phaseManager = FindObjectOfType<PhaseLoopManager>();
+        }
+
+        StartCoroutine(RandomRotateLoop());
     }
 
     private void Update()
     {
-        if (isBusy)
-        {
-            return;
-        }
-
         if (Input.GetKeyDown(KeyCode.W))
         {
-            StartCoroutine(MoveAndRotate(KeyCode.W));
+            Move(KeyCode.W);
         }
 
         if (Input.GetKeyDown(KeyCode.A))
         {
-            StartCoroutine(MoveAndRotate(KeyCode.A));
+            Move(KeyCode.A);
         }
 
         if (Input.GetKeyDown(KeyCode.S))
         {
-            StartCoroutine(MoveAndRotate(KeyCode.S));
+            Move(KeyCode.S);
         }
 
         if (Input.GetKeyDown(KeyCode.D))
         {
-            StartCoroutine(MoveAndRotate(KeyCode.D));
+            Move(KeyCode.D);
         }
     }
 
-    private IEnumerator MoveAndRotate(KeyCode key)
+    private void Move(KeyCode key)
     {
-        isBusy = true;
-
-        // ?? move based on random mapping
         Vector3 moveDir = keyMapping[key];
-        transform.position += moveDir * stepDistance;
 
-        // ?? random rotation direction
+        transform.position += moveDir * stepDistance;
+    }
+
+    private IEnumerator RandomRotateLoop()
+    {
+        while (true)
+        {
+            if (PhaseLoopManager.GlobalState != GameState.Dream)
+            {
+                yield return null;
+                continue;
+            }
+
+            yield return new WaitForSeconds(GetRotateDelay());
+
+            if (PhaseLoopManager.GlobalState != GameState.Dream)
+            {
+                continue;
+            }
+
+            yield return StartCoroutine(RotateRoom());
+
+            GenerateRandomMapping();
+        }
+    }
+
+    private IEnumerator RotateRoom()
+    {
         float direction = Random.value < 0.5f ? -1f : 1f;
 
         float rotated = 0f;
@@ -79,12 +119,15 @@ public class RandomWASDRotate : MonoBehaviour
             roomRoot.Rotate(0f, 0f, step * direction);
 
             rotated += step;
+
             yield return null;
         }
 
-        GenerateRandomMapping();
+        float z = roomRoot.eulerAngles.z;
 
-        isBusy = false;
+        z = Mathf.Round(z / 90f) * 90f;
+
+        roomRoot.eulerAngles = new Vector3(0f, 0f, z);
     }
 
     private void GenerateRandomMapping()
@@ -109,5 +152,22 @@ public class RandomWASDRotate : MonoBehaviour
 
             pool.RemoveAt(index);
         }
+    }
+
+    private float GetRotateDelay()
+    {
+        switch (difficulty)
+        {
+            case Difficulty.Easy:
+                return easyRotateDelay;
+
+            case Difficulty.Medium:
+                return mediumRotateDelay;
+
+            case Difficulty.Hard:
+                return hardRotateDelay;
+        }
+
+        return mediumRotateDelay;
     }
 }

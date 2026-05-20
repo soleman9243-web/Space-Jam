@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -14,7 +13,8 @@ public class PlayerRecorder : MonoBehaviour
         public float time;
     }
 
-    private List<RecordData> records = new List<RecordData>();
+    private readonly List<RecordData> records = new List<RecordData>();
+
     private float timer;
 
     private void Awake()

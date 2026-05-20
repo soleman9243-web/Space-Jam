@@ -119,8 +119,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 64733cca17391c54c986cf012be8a5ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  delay: 0.2
-  moveSpeed: 3.5
+  currentLoop: 1
+  baseDelay: 0.7
+  delayDecreasePerLoop: 0.05
+  minDelay: 0.3
+  killDelay: 1.5
   anim: {fileID: 6933661622147786911}
   sr: {fileID: 525861424170154442}
 --- !u!1 &4345322438457568434

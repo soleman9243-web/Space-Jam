@@ -119,7 +119,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 509a49e717c39154aadd5b24db8e6e3d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeedIn: 4
+  moveSpeedIn: 8
   moveSpeedOut: 8
   reactSpeedMultiplier: 0.4
   despawnDelay: 5

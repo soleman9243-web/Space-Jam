@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class ShadowSpawner : MonoBehaviour
@@ -9,30 +7,80 @@ public class ShadowSpawner : MonoBehaviour
     [Header("Prefab")]
     [SerializeField] private GameObject shadowPrefab;
 
-    [Header("Spawn Offset")]
-    [SerializeField] private Vector3 offset = new Vector3(-2f, 0f, 0f);
+    [Header("Difficulty")]
+    [SerializeField] private int currentLoop = 1;
+
+    private GameObject currentShadow;
 
     private void Awake()
     {
         Instance = this;
     }
 
+    private void Start()
+    {
+        SpawnOnPlayer();
+    }
+
     public void SpawnOnPlayer()
     {
         if (PlayerRecorder.Instance == null)
+        {
+            Debug.LogWarning("PlayerRecorder tidak ditemukan!");
+            return;
+        }
+
+        if (shadowPrefab == null)
+        {
+            Debug.LogWarning("Shadow Prefab belum di assign!");
+            return;
+        }
+
+        if (currentShadow != null)
         {
             return;
         }
 
         Transform player = PlayerRecorder.Instance.transform;
 
-        Vector3 spawnPos = player.position + offset;
+        currentShadow = Instantiate(
+            shadowPrefab,
+            player.position,
+            Quaternion.identity
+        );
 
-        Instantiate(shadowPrefab, spawnPos, Quaternion.identity);
+        ShadowMimic shadow = currentShadow.GetComponent<ShadowMimic>();
+
+        if (shadow != null)
+        {
+            shadow.SetLoop(currentLoop);
+        }
     }
 
-    public void SpawnShadow(Vector3 position)
+    public void RemoveShadow()
     {
-        Instantiate(shadowPrefab, position, Quaternion.identity);
+        if (currentShadow == null)
+        {
+            return;
+        }
+
+        Destroy(currentShadow);
+
+        currentShadow = null;
+    }
+
+    public void SetLoop(int loop)
+    {
+        currentLoop = loop;
+
+        if (currentShadow != null)
+        {
+            ShadowMimic shadow = currentShadow.GetComponent<ShadowMimic>();
+
+            if (shadow != null)
+            {
+                shadow.SetLoop(currentLoop);
+            }
+        }
     }
 }

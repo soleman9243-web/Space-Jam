@@ -223,4 +223,39 @@ public class TVRepairMinigame : BaseTask
 
         DeactivateTask();
     }
+    private void OnDrawGizmos()
+    {
+        if (signalBar == null || safeZone == null)
+        {
+            return;
+        }
+
+        RectTransform parent = signalBar.parent as RectTransform;
+        if (parent == null)
+        {
+            return;
+        }
+
+        float range = parent.rect.width * 0.5f;
+
+        Vector3 center = parent.position;
+
+        // SIGNAL RANGE (kiri-kanan limit)
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawLine(
+            center + Vector3.left * range,
+            center + Vector3.right * range
+        );
+
+        // SAFE ZONE POSITION
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireCube(
+            safeZone.position,
+            new Vector3(safeZone.rect.width, 20f, 1f)
+        );
+
+        // SIGNAL POSITION
+        Gizmos.color = Color.red;
+        Gizmos.DrawSphere(signalBar.position, 5f);
+    }
 }

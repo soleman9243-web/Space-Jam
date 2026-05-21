@@ -205,4 +205,4 @@ public class EnemyDashSpawner : MonoBehaviour
     public void SetDashSpeed(float v) => dashSpeed = v;
     public void SetSpawnCooldown(float v) => spawnCooldown = v;
     public void SetFollowDuration(float v) => followDuration = v;
-}
+}   

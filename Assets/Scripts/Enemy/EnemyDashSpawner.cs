@@ -19,20 +19,21 @@ public class EnemyDashSpawner : MonoBehaviour
     [SerializeField] private EnemyDifficultyController difficultyController;
 
     [Header("Settings")]
-    [SerializeField] private int trackCount = 1;
+    [SerializeField] private int trackCount = 5;
     [SerializeField] private float dashSpeed = 20f;
     [SerializeField] private float spawnCooldown = 2f;
     [SerializeField] private float followDuration = 2f;
     [SerializeField] private float lockDuration = 0.5f;
 
     [Header("Pattern")]
-    [SerializeField] private float spacing = 2f;
+    [SerializeField] private float spacing = 3.5f;
     [SerializeField] private float spawnOffset = 12f;
 
     private readonly List<GameObject> currentTracks = new();
 
     private bool canSpawn;
     private bool infiniteMode;
+    private float currentOffset = 0f;
 
     private bool isPatternActive;
 
@@ -72,6 +73,7 @@ public class EnemyDashSpawner : MonoBehaviour
         for (int i = 0; i < patternCount; i++)
         {
             DashDirection dir = (DashDirection)Random.Range(0, 4);
+            currentOffset = Random.Range(-5f, 5f);
             yield return SpawnSinglePattern(dir);
             yield return new WaitForSeconds(0.1f);
         }
@@ -117,12 +119,12 @@ public class EnemyDashSpawner : MonoBehaviour
                 dir == DashDirection.DownToUp)
             {
                 currentTracks[i].transform.position =
-                    new Vector3(p.x + offset, 0f, 0f);
+                    new Vector3(p.x + offset + currentOffset, 0f, 0f);
             }
             else
             {
                 currentTracks[i].transform.position =
-                    new Vector3(0f, p.y + offset, 0f);
+                    new Vector3(0f, p.y + offset + currentOffset, 0f);
             }
         }
     }

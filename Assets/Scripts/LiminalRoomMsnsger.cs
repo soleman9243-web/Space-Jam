@@ -23,6 +23,7 @@ public class LiminalRoomManager : MonoBehaviour
     [Header("Worlds")]
     [SerializeField] private GameObject normalWorld;
     [SerializeField] private GameObject liminalWorld;
+    [SerializeField] private Transform liminalSpawnPoint;
 
     [Header("Enemy Challenge")]
     [SerializeField] private EnemyDashSpawner enemySpawner;
@@ -42,6 +43,7 @@ public class LiminalRoomManager : MonoBehaviour
     private bool transitioning;
     private LiminalChallengeType currentChallenge;
     private GameObject currentObstacle;
+    private Vector3 previousPlayerPosition;
 
     // ?? Unity ??????????????????????????????????????????????????????????????
 
@@ -68,6 +70,24 @@ public class LiminalRoomManager : MonoBehaviour
 
         normalWorld.SetActive(false);
         liminalWorld.SetActive(true);
+
+        // --- TELEPORT PLAYER ---
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            previousPlayerPosition = player.transform.position;
+            if (liminalSpawnPoint != null)
+            {
+                player.transform.position = liminalSpawnPoint.position;
+            }
+            else
+            {
+                player.transform.position = liminalWorld.transform.position;
+            }
+
+            Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
+            if (rb != null) rb.velocity = Vector2.zero;
+        }
 
         SpawnRandomObstacle();
 
@@ -122,6 +142,15 @@ public class LiminalRoomManager : MonoBehaviour
 
         liminalWorld.SetActive(false);
         normalWorld.SetActive(true);
+
+        // --- KEMBALIKAN PLAYER ---
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            player.transform.position = previousPlayerPosition;
+            Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
+            if (rb != null) rb.velocity = Vector2.zero;
+        }
 
         // Kembalikan ke state sebelum masuk Liminal
         PhaseLoopManager manager = FindObjectOfType<PhaseLoopManager>();

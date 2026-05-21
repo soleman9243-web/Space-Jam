@@ -171,23 +171,7 @@ public class PhaseTaskManager : MonoBehaviour
             {
                 objectiveText.text = "";
             }
-
-            // SKIP WAKTU KE FASE BERIKUTNYA AGAR TIDAK NUNGGU LAMA!
-            SpaceJam.Environment.DayNightCycle2D timeCycle = FindObjectOfType<SpaceJam.Environment.DayNightCycle2D>();
-            if (timeCycle != null && phaseManager != null)
-            {
-                if (phaseManager.CurrentState == GameState.Awake)
-                {
-                    Debug.Log("[PhaseTaskManager] Semua quest Siang selesai! Skip langsung ke Malam.");
-                    timeCycle.SetNight();
-                }
-                else if (phaseManager.CurrentState == GameState.Dream)
-                {
-                    Debug.Log("[PhaseTaskManager] Semua quest Malam selesai! Skip langsung ke Pagi.");
-                    timeCycle.SetMorning();
-                }
-            }
-
+            
             return;
         }
 

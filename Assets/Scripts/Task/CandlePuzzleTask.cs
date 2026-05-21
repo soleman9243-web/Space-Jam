@@ -17,10 +17,10 @@ namespace SpaceJam.Minigames
         [SerializeField] private int candleCount = 5;
 
         [Tooltip("Jarak radius lingkaran lilin dari player.")]
-        [SerializeField] private float circleRadius = 3f;
+        [SerializeField] private float circleRadius = 0.7f;
 
         [Tooltip("Radius interaksi setiap lilin.")]
-        [SerializeField] private float interactRadius = 1.2f;
+        [SerializeField] private float interactRadius = 0.7f;
 
         [Header("Visual Settings")]
         [SerializeField] private int sortingOrder = 5;

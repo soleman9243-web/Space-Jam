@@ -103,22 +103,6 @@ namespace SpaceJam.Environment
             {
                 float newTime = timeOfDay + (Time.deltaTime / cycleDuration) * speedMultiplier;
 
-                // Tahan waktu agar tidak ganti fase jika quest di fase sekarang belum selesai
-                PhaseTaskManager ptm = FindObjectOfType<PhaseTaskManager>();
-                if (ptm != null && !ptm.AreAllCurrentTasksCompleted())
-                {
-                    // Tahan sore sebelum malam
-                    if (timeOfDay < nightStart && newTime >= nightStart)
-                    {
-                        newTime = nightStart - 0.0001f;
-                    }
-                    // Tahan malam sebelum pagi
-                    else if (timeOfDay < morningStart && newTime >= morningStart)
-                    {
-                        newTime = morningStart - 0.0001f;
-                    }
-                }
-
                 // Loop around when reaching 1.0
                 if (newTime >= 1f)
                 {

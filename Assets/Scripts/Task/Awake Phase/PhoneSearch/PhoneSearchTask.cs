@@ -1,83 +1,106 @@
-using System.Collections.Generic;
 using UnityEngine;
 
-public class PhoneSearchTask : BaseTask
+public class FindPhoneTask : BaseTask
 {
-    [Header("Phone Objects")]
-    [SerializeField] private List<PhoneSearchObject> allObjects;
+    [Header("Phone Search Objects")]
+    [SerializeField] private PhoneSearchObject[] searchObjects;
+
+    [Header("Stability")]
+    [SerializeField] private float baseReward = 5f;
+    [SerializeField] private float rewardIncreasePerLoop = 1f;
 
     private PhoneSearchObject correctObject;
-    private bool finished = false;
+
+    // =============================================
+    // LIFECYCLE
+    // =============================================
 
     public override void ActivateTask()
     {
         base.ActivateTask();
 
-        finished = false;
+        taskText = "Find a phone in the room";
+
         AssignRandomPhone();
+
+        Debug.Log("[FindPhoneTask] Activated. Phone hidden in: " + correctObject.name);
     }
 
     public override void ResetTask()
     {
         base.ResetTask();
 
-        finished = false;
+        foreach (var obj in searchObjects)
+        {
+            obj.ResetObject();
+        }
+
         correctObject = null;
     }
 
+    public override void ForceStopTask()
+    {
+        foreach (var obj in searchObjects)
+        {
+            obj.ResetObject();
+        }
+
+        DeactivateTask();
+    }
+
+    // =============================================
+    // SETUP
+    // =============================================
+
     private void AssignRandomPhone()
     {
-        if (allObjects == null || allObjects.Count == 0)
+        if (searchObjects == null || searchObjects.Length == 0)
         {
-            Debug.LogWarning("No phone objects assigned!");
+            Debug.LogError("[FindPhoneTask] No PhoneSearchObjects assigned!");
             return;
         }
 
-        int rand = Random.Range(0, allObjects.Count);
-
-        correctObject = allObjects[rand];
-
-        for (int i = 0; i < allObjects.Count; i++)
+        // Reset semua dulu
+        foreach (var obj in searchObjects)
         {
-            allObjects[i].SetCorrect(allObjects[i] == correctObject);
+            obj.Setup(this, false);
         }
 
-        Debug.Log("PHONE SPAWNED AT: " + correctObject.name);
+        // Pilih 1 random sebagai yang bener
+        int randomIndex = Random.Range(0, searchObjects.Length);
+        correctObject = searchObjects[randomIndex];
+        correctObject.Setup(this, true);
     }
 
-    public void CompletePhoneSearch(bool success)
+    // =============================================
+    // CALLED BY PhoneSearchObject
+    // =============================================
+
+    public void OnPhoneFound()
     {
-        if (finished)
+        if (!IsActive || completed)
         {
             return;
         }
 
-        finished = true;
+        PhaseLoopManager phaseManager =
+            FindObjectOfType<PhaseLoopManager>();
 
-        if (success)
-        {
-            ShowDialog("Kamu nemu HP!");
-            CompleteTask();
-        }
-        else
-        {
-            finished = false;
-        }
-    }
+        int loop =
+            phaseManager != null
+            ? phaseManager.currentLoop
+            : 1;
 
-    public void FailSearch(float penalty, string failText)
-    {
-        ShowDialog(failText);
+        float reward =
+            baseReward + ((loop - 1) * rewardIncreasePerLoop);
 
         if (PlayerStatus.Instance != null)
         {
-            PlayerStatus.Instance.ReduceStability(penalty);
+            PlayerStatus.Instance.IncreaseStability(reward);
         }
-    }
 
-    private void ShowDialog(string text)
-    {
-        Debug.Log(text);
-        // nanti ganti ke dialog system kamu
+        CompleteTask();
+
+        Debug.Log("[FindPhoneTask] Phone found! Task complete.");
     }
 }

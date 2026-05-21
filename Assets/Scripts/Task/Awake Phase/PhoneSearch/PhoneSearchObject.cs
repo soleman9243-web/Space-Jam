@@ -1,47 +1,146 @@
+using System.Collections;
+using TMPro;
 using UnityEngine;
 
 public class PhoneSearchObject : MonoBehaviour
 {
-    [SerializeField] private bool isCorrectPhone;
+    [Header("Dialog Box")]
+    [SerializeField] private GameObject dialogBox;
+    [SerializeField] private TextMeshProUGUI dialogText;
+    [SerializeField] private float dialogDuration = 2f;
 
-    [Header("Config")]
-    [SerializeField] private string wrongText = "Kamu nggak nemu HP";
-    [SerializeField] private float wrongPenalty = 5f;
+    [Header("Input")]
+    [SerializeField] private KeyCode interactKey = KeyCode.E;
 
-    private InteractObject2D interact;
-    private PhoneSearchTask task;
+    private FindPhoneTask linkedTask;
+    private bool isCorrect;
+    private bool hasBeenSearched;
+    private bool playerInRange;
+    private Coroutine dialogCoroutine;
 
-    private void Awake()
+    // =============================================
+    // SETUP
+    // =============================================
+
+    public void Setup(FindPhoneTask task, bool correct)
     {
-        interact = GetComponent<InteractObject2D>();
-        task = GetComponentInParent<PhoneSearchTask>();
+        linkedTask = task;
+        isCorrect = correct;
+        hasBeenSearched = false;
+    }
 
-        if (interact != null)
+    public void ResetObject()
+    {
+        linkedTask = null;
+        isCorrect = false;
+        hasBeenSearched = false;
+        playerInRange = false;
+
+        if (dialogCoroutine != null)
         {
-            interact.onInteract.AddListener(OnInteract);
+            StopCoroutine(dialogCoroutine);
+            dialogCoroutine = null;
+        }
+
+        if (dialogBox != null)
+        {
+            dialogBox.SetActive(false);
         }
     }
 
-    public void SetCorrect(bool value)
-    {
-        isCorrectPhone = value;
-    }
+    // =============================================
+    // DETEKSI SENDIRI — tidak pakai InteractObject2D
+    // =============================================
 
-    private void OnInteract()
+    private void Update()
     {
-        if (task == null || !task.IsActive)
+        if (!playerInRange)
         {
             return;
         }
 
-        if (isCorrectPhone)
+        if (linkedTask == null || !linkedTask.IsActive)
         {
-            task.CompletePhoneSearch(true);
+            return;
+        }
+
+        if (Input.GetKeyDown(interactKey))
+        {
+            OnInteract();
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            playerInRange = true;
+        }
+    }
+
+    private void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            playerInRange = false;
+        }
+    }
+
+    // =============================================
+    // INTERACT
+    // =============================================
+
+    private void OnInteract()
+    {
+        if (hasBeenSearched && !isCorrect)
+        {
+            return;
+        }
+
+        hasBeenSearched = true;
+
+        if (isCorrect)
+        {
+            ShowDialog("You found your phone!");
+            linkedTask.OnPhoneFound();
         }
         else
         {
-            task.FailSearch(wrongPenalty, wrongText);
-            task.CompletePhoneSearch(false);
+            ShowDialog("There's no phone here");
         }
+    }
+
+    // =============================================
+    // DIALOG
+    // =============================================
+
+    private void ShowDialog(string message)
+    {
+        if (dialogBox == null)
+        {
+            return;
+        }
+
+        if (dialogText != null)
+        {
+            dialogText.text = message;
+        }
+
+        if (dialogCoroutine != null)
+        {
+            StopCoroutine(dialogCoroutine);
+        }
+
+        dialogCoroutine = StartCoroutine(DialogRoutine());
+    }
+
+    private IEnumerator DialogRoutine()
+    {
+        dialogBox.SetActive(true);
+
+        yield return new WaitForSeconds(dialogDuration);
+
+        dialogBox.SetActive(false);
+        dialogCoroutine = null;
     }
 }

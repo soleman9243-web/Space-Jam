@@ -95,13 +95,11 @@ public class PauseMenuManager : MonoBehaviour
             {
                 if (i == selectedIndex)
                 {
-                    menuButtons[i].color = selectedColor; // Ubah warna
-                    menuButtons[i].transform.localScale = new Vector3(1.1f, 1.1f, 1f); // Sedikit membesar
+                    menuButtons[i].color = selectedColor; // Ubah warna saja
                 }
                 else
                 {
                     menuButtons[i].color = normalColor; // Kembali ke normal
-                    menuButtons[i].transform.localScale = Vector3.one; // Kembali ukuran asli
                 }
             }
         }

@@ -86,6 +86,10 @@ public class RingBullet : MonoBehaviour
         {
             state = BulletState.Frozen;
         }
+        if (other.CompareTag("Player"))
+        {
+            PlayerStatus.Instance.Die();
+        }
     }
 
     private void OnTriggerExit2D(Collider2D other)
@@ -105,7 +109,6 @@ public class RingBullet : MonoBehaviour
             StartCoroutine(Despawn());
         }
     }
-
     private IEnumerator Despawn()
     {
         yield return new WaitForSeconds(despawnDelay);

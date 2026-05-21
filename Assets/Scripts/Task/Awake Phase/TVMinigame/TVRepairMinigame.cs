@@ -69,7 +69,11 @@ public class TVRepairMinigame : BaseTask
     {
         if (completed) return;
 
-        // Scale dari loop
+        // ?? tambah ini ??
+        StopAllCoroutines();
+        resolving = false;
+        // ????????????????
+
         int loop = GetCurrentLoop();
         signalSpeed = Mathf.Min(baseSignalSpeed + (loop - 1) * signalSpeedPerLoop, maxSignalSpeed);
         zoneSpeed = Mathf.Min(baseZoneSpeed + (loop - 1) * zoneSpeedPerLoop, maxZoneSpeed);
@@ -80,18 +84,31 @@ public class TVRepairMinigame : BaseTask
         zoneRange = signalRange;
 
         isActive = true;
-        puzzleUI.SetActive(true);
-
         stage = 0;
         progress = startProgress;
 
+        puzzleUI.SetActive(true);
         UpdateUI();
         UpdateProgressText();
 
         playerMovement.enabled = false;
         playerInteract.canInteract = false;
+    }
 
-        Debug.Log($"[TVRepair] Loop {loop} ? SignalSpeed:{signalSpeed:F0} LossSpeed:{lossSpeed:F2}");
+    // Tambah override ini agar state bersih saat di-loop oleh PhaseTaskManager
+    public override void ResetTask()
+    {
+        base.ResetTask();
+
+        StopAllCoroutines();
+
+        resolving = false;
+        isActive = false;
+        stage = 0;
+        progress = startProgress;
+
+        UpdateUI();
+        UpdateProgressText();
     }
 
     private void Update()

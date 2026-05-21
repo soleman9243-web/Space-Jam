@@ -14,10 +14,9 @@ public enum LiminalChallengeType
 
 /// <summary>
 /// Mengelola fase Liminal:
-/// - Saat enter: pilih tantangan random (Shadow / Enemy / Bullet)
-/// - Setiap challengeDuration detik, tantangan berganti ke tipe baru yang
-///   random (tidak langsung repeat tipe yang sama)
-/// - Loop terus sampai stability >= 100 (player keluar sendiri)
+/// - Saat enter: pilih 1 tantangan random (Shadow / Enemy / Bullet)
+/// - Tantangan itu jalan terus sampai player keluar sendiri (stability >= 100)
+/// - Setiap masuk Liminal baru, tipe tantangan di-random ulang
 /// </summary>
 public class LiminalRoomManager : MonoBehaviour
 {
@@ -38,18 +37,14 @@ public class LiminalRoomManager : MonoBehaviour
     [Header("Obstacles (opsional)")]
     [SerializeField] private List<GameObject> liminalObstacles;
 
-    [Header("Challenge Settings")]
-    [Tooltip("Berapa detik setiap tantangan berlangsung sebelum berganti.")]
-    [SerializeField] private float challengeDuration = 15f;
-
     // ?? State ??????????????????????????????????????????????????????????????
     private bool active;
     private bool transitioning;
     private LiminalChallengeType currentChallenge;
     private GameObject currentObstacle;
-    private Coroutine challengeLoopCoroutine;
 
     // ?? Unity ??????????????????????????????????????????????????????????????
+
     private void Update()
     {
         if (!active || PlayerStatus.Instance == null)
@@ -88,8 +83,18 @@ public class LiminalRoomManager : MonoBehaviour
             difficultyController.SetLiminalMode(true);
         }
 
-        // Mulai loop tantangan
-        challengeLoopCoroutine = StartCoroutine(ChallengeLoop());
+        // Pilih 1 tipe tantangan random untuk seluruh sesi Liminal ini
+        var all = new List<LiminalChallengeType>
+        {
+            LiminalChallengeType.Shadow,
+            LiminalChallengeType.Enemy,
+            LiminalChallengeType.Bullet
+        };
+
+        currentChallenge = all[Random.Range(0, all.Count)];
+        Debug.Log($"[LiminalRoomManager] Tantangan sesi ini: {currentChallenge}");
+
+        StartChallenge(currentChallenge);
 
         transitioning = false;
     }
@@ -99,13 +104,6 @@ public class LiminalRoomManager : MonoBehaviour
         if (transitioning) return;
         transitioning = true;
         active = false;
-
-        // Hentikan loop
-        if (challengeLoopCoroutine != null)
-        {
-            StopCoroutine(challengeLoopCoroutine);
-            challengeLoopCoroutine = null;
-        }
 
         // Bersihkan tantangan yang sedang berjalan
         StopChallenge(currentChallenge);
@@ -133,56 +131,6 @@ public class LiminalRoomManager : MonoBehaviour
         }
 
         transitioning = false;
-    }
-
-    // ?? Challenge Loop ?????????????????????????????????????????????????????
-
-    /// <summary>
-    /// Terus memutar tantangan random selama fase Liminal aktif.
-    /// Setiap challengeDuration detik, tipe tantangan berganti.
-    /// </summary>
-    private IEnumerator ChallengeLoop()
-    {
-        // Pilih tantangan pertama benar-benar random
-        currentChallenge = PickRandomChallenge(null);
-
-        while (active)
-        {
-            StartChallenge(currentChallenge);
-
-            yield return new WaitForSeconds(challengeDuration);
-
-            if (!active) break;
-
-            StopChallenge(currentChallenge);
-
-            // Pilih tantangan berikutnya — hindari tipe yang sama
-            LiminalChallengeType next = PickRandomChallenge(currentChallenge);
-            currentChallenge = next;
-        }
-    }
-
-    /// <summary>
-    /// Pilih tipe tantangan random. Jika exclude != null, tidak akan
-    /// memilih tipe yang sama dengan yang sedang berjalan.
-    /// </summary>
-    private LiminalChallengeType PickRandomChallenge(
-        LiminalChallengeType? exclude
-    )
-    {
-        var all = new List<LiminalChallengeType>
-        {
-            LiminalChallengeType.Shadow,
-            LiminalChallengeType.Enemy,
-            LiminalChallengeType.Bullet
-        };
-
-        if (exclude.HasValue && all.Count > 1)
-        {
-            all.Remove(exclude.Value);
-        }
-
-        return all[Random.Range(0, all.Count)];
     }
 
     // ?? Start / Stop per challenge ?????????????????????????????????????????

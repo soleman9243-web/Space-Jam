@@ -16,7 +16,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &6168737459437331208
 Transform:
   m_ObjectHideFlags: 0
@@ -137,15 +137,15 @@ MonoBehaviour:
   requireActiveTask: 1
   linkedTask: {fileID: 0}
   lockPlayerOnInteract: 1
-  outlineRenderer: {fileID: 0}
+  outlineRenderer: {fileID: 2995501471925108763}
   outlineColor: {r: 0, g: 0.7, b: 1, a: 1}
-  outlineSize: 1
+  outlineSize: 2
   onInteract:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TVRepairMinigame, Assembly-CSharp
-        m_MethodName: OpenPuzzle
+        m_TargetAssemblyTypeName: MathTaskManager, Assembly-CSharp
+        m_MethodName: OpenTask
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -259,7 +259,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dialogBox: {fileID: 0}
   dialogText: {fileID: 0}
-  dialogDuration: 2
+  dialogDuration: 3
+  outlineRenderer: {fileID: 2995501471925108763}
+  outlineColor: {r: 0, g: 0.7, b: 1, a: 1}
+  outlineSize: 1
   interactKey: 102
 --- !u!1 &8118215349436560016
 GameObject:

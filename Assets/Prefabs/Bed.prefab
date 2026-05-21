@@ -112,7 +112,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7229450848076387355}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 4.11, y: 0.42800248, z: 0}
   m_LocalScale: {x: 1, y: 1.5, z: 1}
   m_ConstrainProportionsScale: 1
@@ -136,9 +136,9 @@ MonoBehaviour:
   requireActiveTask: 1
   linkedTask: {fileID: 0}
   lockPlayerOnInteract: 1
-  outlineRenderer: {fileID: 0}
+  outlineRenderer: {fileID: 5841607730417996477}
   outlineColor: {r: 0, g: 0.7, b: 1, a: 1}
-  outlineSize: 1
+  outlineSize: 2
   onInteract:
     m_PersistentCalls:
       m_Calls:
@@ -258,7 +258,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dialogBox: {fileID: 0}
   dialogText: {fileID: 0}
-  dialogDuration: 2
+  dialogDuration: 3
+  outlineRenderer: {fileID: 7331771362144028302}
+  outlineColor: {r: 0, g: 0.7, b: 1, a: 1}
+  outlineSize: 1
   interactKey: 102
 --- !u!1 &8738157880196494151
 GameObject:

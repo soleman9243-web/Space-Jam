@@ -1,3 +1,8 @@
+// ==============================
+// PhaseTaskManager
+// FINAL
+// ==============================
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,10 +15,8 @@ public class PhaseTaskManager : MonoBehaviour
     private List<BaseTask> currentTasks;
 
     [Header("Bubble")]
-    [Tooltip("Referensi ke TaskBubble yang ada di atas player.")]
     [SerializeField] private TaskBubble taskBubble;
 
-    // objectiveText lama dipertahankan opsional untuk backward compatibility.
     [Header("Legacy UI (opsional)")]
     [SerializeField] private TMPro.TextMeshProUGUI objectiveText;
 
@@ -21,17 +24,16 @@ public class PhaseTaskManager : MonoBehaviour
 
     private GameState lastState;
 
-    // =========================================================
-    // UNITY LIFECYCLE
-    // =========================================================
-
     private IEnumerator Start()
     {
         yield return null;
 
-        if (!enabled) yield break;
+        if (!enabled)
+        {
+            yield break;
+        }
 
-        lastState = phaseManager.CurrentState;
+        lastState = (GameState)(-1);
 
         if (phaseManager != null)
         {
@@ -41,10 +43,6 @@ public class PhaseTaskManager : MonoBehaviour
         SetupTasks();
     }
 
-    // =========================================================
-    // PHASE CHANGED LISTENER
-    // =========================================================
-
     private void OnPhaseChanged(GameState state)
     {
         if (phaseManager == null)
@@ -52,86 +50,94 @@ public class PhaseTaskManager : MonoBehaviour
             return;
         }
 
-        // ?? Masuk Liminal ??????????????????????????????????????
         if (state == GameState.Liminal)
         {
-            if (currentTasks != null && currentTasks.Count > 0)
+            if (currentTasks != null &&
+                currentTasks.Count > 0)
             {
                 currentTasks[0].ForceStopTask();
             }
 
-            // Sembunyikan bubble saat masuk Liminal
             if (taskBubble != null)
             {
                 taskBubble.ClearBubble();
             }
 
             lastState = state;
+
             return;
         }
 
-        // ?? Kembali dari Liminal ???????????????????????????????
-        if (lastState == GameState.Liminal && state != GameState.Liminal)
+        if (state == lastState)
         {
-            SetupTasks();
-            lastState = state;
             return;
         }
 
-        // ?? Normal phase switch (Awake ? Dream) ???????????????
-        SetupTasks();
-        lastState = state;
+        Debug.Log(
+            $"[PhaseTaskManager] PHASE CHANGED: {lastState} -> {state}"
+        );
+
+        StartCoroutine(
+            DelayedSetupTasks(state)
+        );
     }
 
-    // =========================================================
-    // TASK SETUP
-    // =========================================================
+    private IEnumerator DelayedSetupTasks(
+        GameState state
+    )
+    {
+        while (phaseManager != null &&
+               phaseManager.IsBusy)
+        {
+            yield return null;
+        }
+
+        SetupTasks();
+
+        lastState = state;
+    }
 
     public void SetupTasks()
     {
         if (phaseManager == null)
         {
-            Debug.LogError("[PhaseTaskManager] PhaseLoopManager not found!");
+            Debug.LogError(
+                "[PhaseTaskManager] PhaseLoopManager not found!"
+            );
+
             return;
         }
 
         currentTasks = new List<BaseTask>();
 
-        GameState state = phaseManager.CurrentState;
+        GameState state =
+            phaseManager.CurrentState;
 
-        // Reset semua task agar clean setiap switch phase
-        if (awakeTasks != null)
+        if (state == GameState.Awake &&
+            awakeTasks != null)
         {
-            foreach (var task in awakeTasks)
+            foreach (var t in awakeTasks)
             {
-                if (task != null)
+                if (t != null)
                 {
-                    task.DeactivateTask();
-                    task.ResetTask();
+                    t.ResetTask();
+
+                    currentTasks.Add(t);
                 }
             }
         }
-
-        if (dreamTasks != null)
+        else if (state == GameState.Dream &&
+                 dreamTasks != null)
         {
-            foreach (var task in dreamTasks)
+            foreach (var t in dreamTasks)
             {
-                if (task != null)
+                if (t != null)
                 {
-                    task.DeactivateTask();
-                    task.ResetTask();
+                    t.ResetTask();
+
+                    currentTasks.Add(t);
                 }
             }
-        }
-
-        // Assign task sesuai phase
-        if (state == GameState.Awake && awakeTasks != null)
-        {
-            foreach (var t in awakeTasks) if (t != null) currentTasks.Add(t);
-        }
-        else if (state == GameState.Dream && dreamTasks != null)
-        {
-            foreach (var t in dreamTasks) if (t != null) currentTasks.Add(t);
         }
 
         ShuffleTasks();
@@ -139,17 +145,15 @@ public class PhaseTaskManager : MonoBehaviour
         if (currentTasks.Count > 0)
         {
             currentTasks[0].ActivateTask();
+
+            ShowCurrentTaskBubble();
         }
 
-        // Bubble otomatis muncul dengan task pertama (typewriter dari awal)
-        ShowCurrentTaskBubble();
-
-        Debug.Log("[PhaseTaskManager] TASK SETUP: " + state);
+        Debug.Log(
+            "[PhaseTaskManager] TASK SETUP: " +
+            state
+        );
     }
-
-    // =========================================================
-    // COMPLETE / LOOP
-    // =========================================================
 
     public void CompleteTask(BaseTask task)
     {
@@ -162,66 +166,87 @@ public class PhaseTaskManager : MonoBehaviour
 
         if (currentTasks.Count <= 0)
         {
-            // Jangan di-loop! Biarkan daftar kosong tanda fase ini udah "clear"
-            if (taskBubble != null)
-            {
-                taskBubble.ClearBubble();
-            }
-            if (objectiveText != null)
-            {
-                objectiveText.text = "";
-            }
-            
-            return;
+            RebuildCurrentPhaseTasks();
         }
 
-        // Aktifkan task berikutnya
-        currentTasks[0].ActivateTask();
+        if (currentTasks.Count > 0)
+        {
+            currentTasks[0].ActivateTask();
 
-        // Bubble otomatis muncul dengan task baru (typewriter dari awal)
-        ShowCurrentTaskBubble();
+            ShowCurrentTaskBubble();
+        }
+    }
+
+    private void RebuildCurrentPhaseTasks()
+    {
+        currentTasks = new List<BaseTask>();
+
+        GameState state =
+            phaseManager.CurrentState;
+
+        if (state == GameState.Awake &&
+            awakeTasks != null)
+        {
+            foreach (var t in awakeTasks)
+            {
+                if (t != null)
+                {
+                    t.ResetTask();
+
+                    currentTasks.Add(t);
+                }
+            }
+        }
+        else if (state == GameState.Dream &&
+                 dreamTasks != null)
+        {
+            foreach (var t in dreamTasks)
+            {
+                if (t != null)
+                {
+                    t.ResetTask();
+
+                    currentTasks.Add(t);
+                }
+            }
+        }
+
+        ShuffleTasks();
+
+        Debug.Log(
+            "[PhaseTaskManager] QUEST LOOP RESET"
+        );
     }
 
     public bool AreAllCurrentTasksCompleted()
     {
-        return currentTasks != null && currentTasks.Count == 0;
+        return currentTasks != null &&
+               currentTasks.Count == 0;
     }
-
-    // LoopCurrentPhaseTasks DIHAPUS agar quest tidak berulang tanpa akhir
-
-    // =========================================================
-    // FORCE ACTIVATE
-    // =========================================================
 
     public void ForceActivateTask(BaseTask task)
     {
         if (currentTasks == null)
         {
-            currentTasks = new List<BaseTask>();
+            currentTasks =
+                new List<BaseTask>();
         }
 
         if (currentTasks.Count > 0)
         {
-            currentTasks[0].DeactivateTask();
+            currentTasks[0]
+                .DeactivateTask();
         }
 
         currentTasks.Remove(task);
+
         currentTasks.Insert(0, task);
 
         task.ActivateTask();
 
-        // Bubble muncul dengan task yang di-force
         ShowCurrentTaskBubble();
     }
 
-    // =========================================================
-    // BUBBLE & UI
-    // =========================================================
-
-    /// <summary>
-    /// Tampilkan bubble dengan task aktif saat ini.
-    /// Auto-show + typewriter dari awal � dipakai saat task baru di-assign.
-    /// </summary>
     private void ShowCurrentTaskBubble()
     {
         string text = GetCurrentTaskText();
@@ -242,15 +267,10 @@ public class PhaseTaskManager : MonoBehaviour
         }
         else
         {
-            // ShowNewTask = auto-show + typewriter dari awal
             taskBubble.ShowNewTask(text);
         }
     }
 
-    /// <summary>
-    /// Refresh text di UI dan bubble tanpa auto-show dan tanpa typewriter.
-    /// Dipakai untuk update progress di tengah task (misal: TrashCleanupTask).
-    /// </summary>
     public void UpdateObjectiveUI()
     {
         string text = GetCurrentTaskText();
@@ -260,7 +280,6 @@ public class PhaseTaskManager : MonoBehaviour
             objectiveText.text = text;
         }
 
-        // RefreshText: update text kalau bubble terbuka, tidak paksa show
         if (taskBubble != null)
         {
             taskBubble.RefreshText(text);
@@ -269,23 +288,30 @@ public class PhaseTaskManager : MonoBehaviour
 
     private string GetCurrentTaskText()
     {
-        return (currentTasks == null || currentTasks.Count == 0)
+        return (currentTasks == null ||
+                currentTasks.Count == 0)
             ? ""
             : currentTasks[0].GetTaskText();
     }
 
-    // =========================================================
-    // UTILITIES
-    // =========================================================
-
     private void ShuffleTasks()
     {
-        for (int i = 0; i < currentTasks.Count; i++)
+        for (int i = 0;
+             i < currentTasks.Count;
+             i++)
         {
-            int rand = Random.Range(i, currentTasks.Count);
+            int rand =
+                Random.Range(
+                    i,
+                    currentTasks.Count
+                );
 
-            BaseTask temp = currentTasks[i];
-            currentTasks[i] = currentTasks[rand];
+            BaseTask temp =
+                currentTasks[i];
+
+            currentTasks[i] =
+                currentTasks[rand];
+
             currentTasks[rand] = temp;
         }
     }

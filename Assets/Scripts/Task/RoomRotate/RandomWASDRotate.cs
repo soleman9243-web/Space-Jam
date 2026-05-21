@@ -83,24 +83,34 @@ public class RandomWASDRotate : MonoBehaviour
         transform.position += moveDir * stepDistance;
     }
 
+
     private IEnumerator RandomRotateLoop()
     {
         while (true)
         {
-            if (PhaseLoopManager.GlobalState != GameState.Dream)
+            if (PhaseLoopManager.GlobalState != GameState.Dream ||
+                (phaseManager != null &&
+                 phaseManager.IsBusy))
             {
                 yield return null;
+
                 continue;
             }
 
-            yield return new WaitForSeconds(GetRotateDelay());
+            yield return new WaitForSeconds(
+                GetRotateDelay()
+            );
 
-            if (PhaseLoopManager.GlobalState != GameState.Dream)
+            if (PhaseLoopManager.GlobalState != GameState.Dream ||
+                (phaseManager != null &&
+                 phaseManager.IsBusy))
             {
                 continue;
             }
 
-            yield return StartCoroutine(RotateRoom());
+            yield return StartCoroutine(
+                RotateRoom()
+            );
 
             GenerateRandomMapping();
         }

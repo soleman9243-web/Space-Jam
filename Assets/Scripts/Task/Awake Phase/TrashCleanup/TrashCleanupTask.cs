@@ -1,3 +1,7 @@
+// ==============================
+// TrashCleanupTask
+// ==============================
+
 using UnityEngine;
 
 public class TrashCleanupTask : BaseTask
@@ -36,6 +40,7 @@ public class TrashCleanupTask : BaseTask
     private int GetCurrentLoop()
     {
         PhaseLoopManager pm = FindObjectOfType<PhaseLoopManager>();
+
         return pm != null ? pm.currentLoop : 1;
     }
 
@@ -60,9 +65,10 @@ public class TrashCleanupTask : BaseTask
         cleanedTrash = 0;
 
         UpdateTaskText();
+
         SpawnTrash();
 
-        Debug.Log($"[TrashTask] Loop {loop} ? Target: {targetTrash}");
+        Debug.Log($"[TrashTask] Loop {loop} -> Target: {targetTrash}");
     }
 
     public override void ResetTask()
@@ -70,11 +76,13 @@ public class TrashCleanupTask : BaseTask
         base.ResetTask();
 
         initialized = false;
+
         cleanedTrash = 0;
 
         if (currentTrash != null)
         {
             Destroy(currentTrash.gameObject);
+
             currentTrash = null;
         }
     }
@@ -84,14 +92,13 @@ public class TrashCleanupTask : BaseTask
         if (currentTrash != null)
         {
             Destroy(currentTrash.gameObject);
+
             currentTrash = null;
         }
 
         initialized = false;
+
         DeactivateTask();
-
-        CompleteTask();
-
     }
 
     public void CleanTrash(TrashObject trash)
@@ -104,6 +111,7 @@ public class TrashCleanupTask : BaseTask
         cleanedTrash++;
 
         Destroy(trash.gameObject);
+
         currentTrash = null;
 
         if (PlayerStatus.Instance != null)
@@ -121,6 +129,7 @@ public class TrashCleanupTask : BaseTask
             }
 
             CompleteTask();
+
             return;
         }
 
@@ -132,16 +141,20 @@ public class TrashCleanupTask : BaseTask
         if (currentTrash != null)
         {
             Destroy(currentTrash.gameObject);
+
             currentTrash = null;
         }
 
         if (!TryGetSpawnPosition(out Vector2 spawnPos))
         {
             Debug.LogWarning("Gagal spawn trash");
+
             return;
         }
 
-        currentTrash = Instantiate(trashPrefab, spawnPos, Quaternion.identity);
+        currentTrash =
+            Instantiate(trashPrefab, spawnPos, Quaternion.identity);
+
         currentTrash.Setup(this);
     }
 
@@ -165,18 +178,23 @@ public class TrashCleanupTask : BaseTask
             }
 
             position = rand;
+
             return true;
         }
 
         position = Vector2.zero;
+
         return false;
     }
 
     private void UpdateTaskText()
     {
-        taskText = $"Clean Trash ({cleanedTrash}/{targetTrash})";
+        taskText =
+            $"Clean Trash ({cleanedTrash:0}/{targetTrash:0})";
 
-        PhaseTaskManager tm = FindObjectOfType<PhaseTaskManager>();
+        PhaseTaskManager tm =
+            FindObjectOfType<PhaseTaskManager>();
+
         if (tm != null)
         {
             tm.UpdateObjectiveUI();

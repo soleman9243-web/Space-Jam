@@ -1,3 +1,8 @@
+// ==============================
+// PhaseLoopManager
+// FINAL
+// ==============================
+
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
@@ -10,6 +15,7 @@ public enum GameState
     Dream,
     Liminal
 }
+
 public class PhaseLoopManager : MonoBehaviour
 {
     [Header("Liminal")]
@@ -49,6 +55,21 @@ public class PhaseLoopManager : MonoBehaviour
     public static GameState GlobalState =
         GameState.Awake;
 
+    // =====================================
+    // BUSY STATE
+    // =====================================
+
+    public bool IsBusy
+    {
+        get;
+        private set;
+    }
+
+    public void SetBusy(bool busy)
+    {
+        IsBusy = busy;
+    }
+
     private void Awake()
     {
         DontDestroyOnLoad(gameObject);
@@ -86,7 +107,6 @@ public class PhaseLoopManager : MonoBehaviour
             return;
         }
 
-        // Jangan transition jika sedang dalam Intro Sequence
         if (FindObjectOfType<IntroSequenceManager>() != null)
         {
             return;
@@ -104,10 +124,6 @@ public class PhaseLoopManager : MonoBehaviour
             StartManualTransition(GameState.Liminal);
         }
     }
-
-    // =============================================
-    // DAY NIGHT CYCLE
-    // =============================================
 
     private void OnDayPhaseChanged(DayPhase dayPhase)
     {
@@ -135,10 +151,6 @@ public class PhaseLoopManager : MonoBehaviour
             ? GameState.Dream
             : GameState.Awake;
     }
-
-    // =============================================
-    // TRANSITION
-    // =============================================
 
     private void ExecuteTransition(GameState targetState)
     {
@@ -170,7 +182,11 @@ public class PhaseLoopManager : MonoBehaviour
         Transform wakeUpPosition = null
     )
     {
-        if (isTransitioning) return;
+        if (isTransitioning)
+        {
+            return;
+        }
+
         isTransitioning = true;
 
         Debug.Log(
@@ -242,6 +258,7 @@ public class PhaseLoopManager : MonoBehaviour
                 }
 
                 isTransitioning = false;
+
                 yield break;
             }
             else
@@ -321,7 +338,6 @@ public class PhaseLoopManager : MonoBehaviour
 
         OnPhaseChanged?.Invoke(state);
 
-        // Update BGM
         if (AudioManager.Instance != null)
         {
             switch (state)
@@ -329,9 +345,11 @@ public class PhaseLoopManager : MonoBehaviour
                 case GameState.Awake:
                     AudioManager.Instance.PlayBGM(BGMType.Awake);
                     break;
+
                 case GameState.Dream:
                     AudioManager.Instance.PlayBGM(BGMType.Dream);
                     break;
+
                 case GameState.Liminal:
                     AudioManager.Instance.PlayBGM(BGMType.Liminal);
                     break;

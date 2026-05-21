@@ -52,7 +52,7 @@ MonoBehaviour:
   requireActiveTask: 0
   linkedTask: {fileID: 0}
   lockPlayerOnInteract: 1
-  outlineRenderer: {fileID: 0}
+  outlineRenderer: {fileID: 4243357254879947732}
   outlineColor: {r: 0, g: 0.7, b: 1, a: 1}
   outlineSize: 1
   onInteract:

@@ -137,7 +137,7 @@ MonoBehaviour:
   requireActiveTask: 1
   linkedTask: {fileID: 0}
   lockPlayerOnInteract: 1
-  outlineRenderer: {fileID: 0}
+  outlineRenderer: {fileID: 5190167277449407341}
   outlineColor: {r: 0, g: 0.7, b: 1, a: 1}
   outlineSize: 2
   onInteract:
@@ -260,10 +260,10 @@ MonoBehaviour:
   dialogBox: {fileID: 0}
   dialogText: {fileID: 0}
   dialogDuration: 2
-  interactKey: 102
   outlineRenderer: {fileID: 0}
   outlineColor: {r: 0, g: 0.7, b: 1, a: 1}
   outlineSize: 1
+  interactKey: 102
 --- !u!1 &8118215349436560016
 GameObject:
   m_ObjectHideFlags: 0

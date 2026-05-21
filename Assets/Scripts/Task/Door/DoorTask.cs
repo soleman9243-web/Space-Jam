@@ -21,6 +21,13 @@ public class DoorTask : BaseTask
         {
             PlayerStatus.Instance.IncreaseStability(50);
             CompleteTask();
+            
+            // Lanjut ke pagi hari (Loop Berikutnya)
+            PhaseLoopManager phaseLoop = FindObjectOfType<PhaseLoopManager>();
+            if (phaseLoop != null)
+            {
+                phaseLoop.StartManualTransition(GameState.Awake);
+            }
         }
     }
 

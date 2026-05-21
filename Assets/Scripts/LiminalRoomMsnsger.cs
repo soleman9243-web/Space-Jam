@@ -45,6 +45,8 @@ public class LiminalRoomManager : MonoBehaviour
     private GameObject currentObstacle;
     private Vector3 previousPlayerPosition;
 
+    private static List<LiminalChallengeType> challengeBag = new List<LiminalChallengeType>();
+
     // ?? Unity ??????????????????????????????????????????????????????????????
 
     private void Update()
@@ -103,15 +105,25 @@ public class LiminalRoomManager : MonoBehaviour
             difficultyController.SetLiminalMode(true);
         }
 
-        // Pilih 1 tipe tantangan random untuk seluruh sesi Liminal ini
-        var all = new List<LiminalChallengeType>
+        if (challengeBag.Count == 0)
         {
-            LiminalChallengeType.Shadow,
-            LiminalChallengeType.Enemy,
-            LiminalChallengeType.Bullet
-        };
+            challengeBag.Add(LiminalChallengeType.Shadow);
+            challengeBag.Add(LiminalChallengeType.Enemy);
+            challengeBag.Add(LiminalChallengeType.Bullet);
 
-        currentChallenge = all[Random.Range(0, all.Count)];
+            // Shuffle
+            for (int i = 0; i < challengeBag.Count; i++)
+            {
+                int r = Random.Range(i, challengeBag.Count);
+                var temp = challengeBag[i];
+                challengeBag[i] = challengeBag[r];
+                challengeBag[r] = temp;
+            }
+        }
+
+        currentChallenge = challengeBag[0];
+        challengeBag.RemoveAt(0);
+
         Debug.Log($"[LiminalRoomManager] Tantangan sesi ini: {currentChallenge}");
 
         StartChallenge(currentChallenge);
@@ -148,6 +160,7 @@ public class LiminalRoomManager : MonoBehaviour
         if (player != null)
         {
             player.transform.position = previousPlayerPosition;
+            player.transform.rotation = Quaternion.identity; // FIX: Reset rotation
             Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
             if (rb != null) rb.velocity = Vector2.zero;
         }

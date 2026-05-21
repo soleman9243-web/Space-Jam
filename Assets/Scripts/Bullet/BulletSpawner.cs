@@ -19,24 +19,41 @@ public class BulletSpawner : MonoBehaviour
     // Track semua bullet yang di-spawn agar bisa di-cleanup saat stop
     private readonly List<RingBullet> activeBullets = new();
 
+    private Coroutine spawnCoroutine;
+    [SerializeField] private float spawnInterval = 3f;
+
     public void StartSpawning()
     {
         isActive = true;
         ringIndex = 0;
-        SpawnRing();
+        
+        if (spawnCoroutine != null) StopCoroutine(spawnCoroutine);
+        spawnCoroutine = StartCoroutine(SpawnLoop());
+    }
+
+    private System.Collections.IEnumerator SpawnLoop()
+    {
+        while (isActive)
+        {
+            SpawnRing();
+            yield return new WaitForSeconds(spawnInterval);
+        }
     }
 
     public void StopSpawning()
     {
         isActive = false;
+        
+        if (spawnCoroutine != null)
+        {
+            StopCoroutine(spawnCoroutine);
+            spawnCoroutine = null;
+        }
 
         // Destroy semua bullet yang masih aktif
         foreach (var bullet in activeBullets)
         {
-            if (bullet != null)
-            {
-                Destroy(bullet.gameObject);
-            }
+            if (bullet != null) Destroy(bullet.gameObject);
         }
 
         activeBullets.Clear();
@@ -75,9 +92,9 @@ public class BulletSpawner : MonoBehaviour
             bullet.SetDirection(dirToCenter);
             bullet.SetPlayer(player);
             bullet.SetSpawner(this);
-
-            // Cuma bullet pertama yang boleh spawn ring berikutnya
-            bullet.SetCanSpawnNextRing(i == 0);
+            
+            // Trigger spawn dari bullet tidak diperlukan lagi
+            bullet.SetCanSpawnNextRing(false);
 
             activeBullets.Add(bullet);
         }

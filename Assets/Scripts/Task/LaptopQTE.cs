@@ -4,7 +4,7 @@ using UnityEngine.UI; // Membutuhkan UI untuk Slider
 using System.Collections.Generic;
 using System.Collections;
 
-public class LaptopQTE : MonoBehaviour
+public class LaptopQTE : BaseTask
 {
     [Header("Difficulty Settings")]
     [Tooltip("Jumlah tombol yang harus ditekan")]
@@ -37,14 +37,6 @@ public class LaptopQTE : MonoBehaviour
     [Tooltip("Suara yang dimainkan saat salah pencet")]
     public AudioClip errorSound;
 
-    [Header("Random QTE (Fase 2)")]
-    [Tooltip("Jika dicentang, QTE akan terpicu secara acak khusus di Fase 2 (Dream)")]
-    public bool enableRandomTriggers = true;
-    [Tooltip("Waktu minimum jeda antar pemicuan acak (dalam detik)")]
-    public float minTimeBetweenTriggers = 10f;
-    [Tooltip("Waktu maksimum jeda antar pemicuan acak (dalam detik)")]
-    public float maxTimeBetweenTriggers = 25f;
-
     private PhaseLoopManager phaseLoopManager;
     private Coroutine randomQTECoroutine;
 
@@ -68,64 +60,35 @@ public class LaptopQTE : MonoBehaviour
         // Otomatis matikan UI saat game baru mulai
         if (laptopUIPanel != null) laptopUIPanel.SetActive(false);
         if (overloadPanel != null) overloadPanel.SetActive(false);
-
-        // Cari PhaseLoopManager di scene
-        phaseLoopManager = FindObjectOfType<PhaseLoopManager>();
-        if (phaseLoopManager != null)
+        
+        // Coba daftarkan otomatis ke dreamTasks
+        PhaseTaskManager taskManager = FindObjectOfType<PhaseTaskManager>();
+        if (taskManager != null)
         {
-            phaseLoopManager.OnPhaseChanged.AddListener(OnPhaseChanged);
+            if (taskManager.dreamTasks == null) taskManager.dreamTasks = new List<BaseTask>();
+            if (!taskManager.dreamTasks.Contains(this)) taskManager.dreamTasks.Add(this);
         }
     }
 
-    private void OnDisable()
+    public override void ActivateTask()
     {
-        if (phaseLoopManager != null)
-        {
-            phaseLoopManager.OnPhaseChanged.RemoveListener(OnPhaseChanged);
-        }
+        base.ActivateTask();
+        // Langsung pop-up tanpa perlu interact!
+        StartMinigame();
     }
 
-    private void OnPhaseChanged(GameState newState)
+    public override void DeactivateTask()
     {
-        if (!enableRandomTriggers) return;
-
-        if (newState == GameState.Dream)
+        base.DeactivateTask();
+        if (isMinigameActive || isOverloading)
         {
-            if (randomQTECoroutine != null) StopCoroutine(randomQTECoroutine);
-            randomQTECoroutine = StartCoroutine(RandomQTERoutine());
-        }
-        else
-        {
-            if (randomQTECoroutine != null)
-            {
-                StopCoroutine(randomQTECoroutine);
-                randomQTECoroutine = null;
-            }
-            
-            // Tutup QTE jika sedang aktif saat berganti fase
-            if (isMinigameActive)
-            {
-                isMinigameActive = false;
-                if (laptopUIPanel != null) laptopUIPanel.SetActive(false);
-                if (playerMovement != null) playerMovement.enabled = true;
-            }
+            isMinigameActive = false;
+            if (laptopUIPanel != null) laptopUIPanel.SetActive(false);
+            if (playerMovement != null) playerMovement.enabled = true;
         }
     }
 
-    private IEnumerator RandomQTERoutine()
-    {
-        while (phaseLoopManager != null && phaseLoopManager.CurrentState == GameState.Dream)
-        {
-            float waitTime = Random.Range(minTimeBetweenTriggers, maxTimeBetweenTriggers);
-            yield return new WaitForSeconds(waitTime);
-
-            if (phaseLoopManager.CurrentState == GameState.Dream && !isMinigameActive && !isOverloading)
-            {
-                Debug.Log("[LaptopQTE] Triggering Random QTE in Dream Phase!");
-                StartMinigame();
-            }
-        }
-    }
+    // Hapus RandomQTERoutine lama
 
     void Update()
     {
@@ -262,7 +225,7 @@ public class LaptopQTE : MonoBehaviour
         if (playerMovement != null) playerMovement.enabled = true;
 
         Debug.Log("QTE BERHASIL!");
-        // Jika ada event / task selesai, panggil di sini
+        CompleteTask(); // Selesaikan Quest
     }
 
     private void FailMinigame()
@@ -319,6 +282,7 @@ public class LaptopQTE : MonoBehaviour
         isOverloading = false;
         
         Debug.Log("QTE GAGAL. Stability berkurang.");
+        CompleteTask(); // Selesaikan Quest meskipun gagal (agar tidak nyangkut)
     }
 
     private IEnumerator ShakeUIRoutine()

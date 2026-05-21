@@ -162,16 +162,8 @@ public class PhaseTaskManager : MonoBehaviour
 
         if (currentTasks.Count <= 0)
         {
-            // Jangan di-loop! Biarkan daftar kosong tanda fase ini udah "clear"
-            if (taskBubble != null)
-            {
-                taskBubble.ClearBubble();
-            }
-            if (objectiveText != null)
-            {
-                objectiveText.text = "";
-            }
-            
+            // Loop quest agar tidak ada waktu kosong
+            SetupTasks();
             return;
         }
 

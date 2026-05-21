@@ -55,25 +55,19 @@ public class RandomWASDRotate : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.W))
+        // Pastikan ruangan selalu reset lurus jika tidak di Dream (misal saat masuk Liminal atau kembali ke Awake)
+        if (PhaseLoopManager.GlobalState != GameState.Dream)
         {
-            Move(KeyCode.W);
+            if (roomRoot != null && roomRoot.eulerAngles.z != 0)
+            {
+                roomRoot.eulerAngles = Vector3.zero;
+            }
         }
 
-        if (Input.GetKeyDown(KeyCode.A))
-        {
-            Move(KeyCode.A);
-        }
-
-        if (Input.GetKeyDown(KeyCode.S))
-        {
-            Move(KeyCode.S);
-        }
-
-        if (Input.GetKeyDown(KeyCode.D))
-        {
-            Move(KeyCode.D);
-        }
+        if (Input.GetKeyDown(KeyCode.W)) Move(KeyCode.W);
+        if (Input.GetKeyDown(KeyCode.A)) Move(KeyCode.A);
+        if (Input.GetKeyDown(KeyCode.S)) Move(KeyCode.S);
+        if (Input.GetKeyDown(KeyCode.D)) Move(KeyCode.D);
     }
 
     private void Move(KeyCode key)

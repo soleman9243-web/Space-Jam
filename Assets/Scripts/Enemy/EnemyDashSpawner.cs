@@ -119,12 +119,12 @@ public class EnemyDashSpawner : MonoBehaviour
                 dir == DashDirection.DownToUp)
             {
                 currentTracks[i].transform.position =
-                    new Vector3(p.x + offset + currentOffset, 0f, 0f);
+                    new Vector3(p.x + offset + currentOffset, p.y, 0f); // Pakai p.y agar tidak meleset
             }
             else
             {
                 currentTracks[i].transform.position =
-                    new Vector3(0f, p.y + offset + currentOffset, 0f);
+                    new Vector3(p.x, p.y + offset + currentOffset, 0f); // Pakai p.x agar tidak meleset
             }
         }
     }

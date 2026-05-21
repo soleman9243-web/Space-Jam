@@ -178,6 +178,16 @@ public class PhaseLoopManager : MonoBehaviour
             targetState
         );
 
+        if (CurrentState == GameState.Dream && targetState == GameState.Awake)
+        {
+            currentLoop++;
+            if (dayNightCycle != null)
+            {
+                dayNightCycle.TimeOfDay = 0.25f; // Set ke Pagi (0.25)
+            }
+            Debug.Log($"[PhaseLoopManager] Loop ke-{currentLoop} (Manual Skip)");
+        }
+
         GlobalState = targetState;
 
         CurrentState = targetState;

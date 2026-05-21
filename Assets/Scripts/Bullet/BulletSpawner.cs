@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class BulletSpawner : MonoBehaviour
@@ -7,23 +8,49 @@ public class BulletSpawner : MonoBehaviour
 
     [Header("Ring Settings")]
     [SerializeField] private int count = 12;
-
     [SerializeField] private float spawnDistance = 10f;
 
     [Header("Reference")]
     [SerializeField] private PlayerMovement player;
 
     private int ringIndex;
+    private bool isActive;
 
-    private void Start()
+    // Track semua bullet yang di-spawn agar bisa di-cleanup saat stop
+    private readonly List<RingBullet> activeBullets = new();
+
+    public void StartSpawning()
     {
+        isActive = true;
+        ringIndex = 0;
         SpawnRing();
+    }
+
+    public void StopSpawning()
+    {
+        isActive = false;
+
+        // Destroy semua bullet yang masih aktif
+        foreach (var bullet in activeBullets)
+        {
+            if (bullet != null)
+            {
+                Destroy(bullet.gameObject);
+            }
+        }
+
+        activeBullets.Clear();
     }
 
     public void SpawnRing()
     {
-        float angleStep = 360f / count;
+        // Jangan spawn ring baru kalau spawner sudah di-stop
+        if (!isActive)
+        {
+            return;
+        }
 
+        float angleStep = 360f / count;
         float rotationOffset = (angleStep * 0.5f) * ringIndex;
 
         for (int i = 0; i < count; i++)
@@ -36,18 +63,31 @@ public class BulletSpawner : MonoBehaviour
                 center.position.y + Mathf.Sin(rad) * spawnDistance
             );
 
-            Vector2 dirToCenter = (center.position - (Vector3)spawnPos).normalized;
+            Vector2 dirToCenter =
+                (center.position - (Vector3)spawnPos).normalized;
 
-            RingBullet bullet = Instantiate(bulletPrefab, spawnPos, Quaternion.identity);
+            RingBullet bullet = Instantiate(
+                bulletPrefab,
+                spawnPos,
+                Quaternion.identity
+            );
 
             bullet.SetDirection(dirToCenter);
             bullet.SetPlayer(player);
             bullet.SetSpawner(this);
 
-            // cuma bullet pertama yang boleh spawn next ring
+            // Cuma bullet pertama yang boleh spawn ring berikutnya
             bullet.SetCanSpawnNextRing(i == 0);
+
+            activeBullets.Add(bullet);
         }
 
         ringIndex++;
+    }
+
+    // Dipanggil oleh RingBullet saat destroyed, agar list tetap bersih
+    public void UnregisterBullet(RingBullet bullet)
+    {
+        activeBullets.Remove(bullet);
     }
 }

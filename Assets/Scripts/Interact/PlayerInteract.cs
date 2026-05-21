@@ -1,26 +1,13 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using TMPro;
 
 public class PlayerInteract2D : MonoBehaviour
 {
-    [Header("UI")]
-    [SerializeField] private GameObject interactBubble;
-
     [Header("Settings")]
     [SerializeField] private KeyCode interactKey = KeyCode.E;
 
     private InteractObject2D currentInteractable;
 
     public bool canInteract = true;
-    private void Start()
-    {
-        if (interactBubble != null)
-        {
-            interactBubble.SetActive(false);
-        }
-    }
 
     private void Update()
     {
@@ -34,6 +21,13 @@ public class PlayerInteract2D : MonoBehaviour
             return;
         }
 
+        if (!currentInteractable.CanInteract())
+        {
+            currentInteractable.SetHighlight(false);
+            currentInteractable = null;
+            return;
+        }
+
         if (Input.GetKeyDown(interactKey))
         {
             currentInteractable.Interact();
@@ -44,29 +38,33 @@ public class PlayerInteract2D : MonoBehaviour
     {
         InteractObject2D interactable = other.GetComponent<InteractObject2D>();
 
-        if (interactable != null)
+        if (interactable == null)
         {
-            currentInteractable = interactable;
-
-            if (interactBubble != null)
-            {
-                interactBubble.SetActive(true);
-            }
+            return;
         }
+
+        if (!interactable.CanInteract())
+        {
+            return;
+        }
+
+        currentInteractable = interactable;
+        currentInteractable.SetHighlight(true);
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
         InteractObject2D interactable = other.GetComponent<InteractObject2D>();
 
-        if (interactable != null && interactable == currentInteractable)
+        if (interactable == null)
         {
-            currentInteractable = null;
+            return;
+        }
 
-            if (interactBubble != null)
-            {
-                interactBubble.SetActive(false);
-            }
+        if (interactable == currentInteractable)
+        {
+            currentInteractable.SetHighlight(false);
+            currentInteractable = null;
         }
     }
 }

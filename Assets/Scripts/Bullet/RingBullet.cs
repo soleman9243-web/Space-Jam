@@ -12,7 +12,6 @@ public class RingBullet : MonoBehaviour
 
     [Header("Movement")]
     [SerializeField] private float moveSpeedIn = 4f;
-
     [SerializeField] private float moveSpeedOut = 8f;
 
     [Header("Reaction")]
@@ -29,9 +28,7 @@ public class RingBullet : MonoBehaviour
 
     private bool isPlayerMoving;
     private bool isDetached;
-
     private bool canSpawnNextRing;
-
     private float currentOutSpeed;
 
     private void Start()
@@ -40,44 +37,35 @@ public class RingBullet : MonoBehaviour
         currentOutSpeed = moveSpeedOut * reactSpeedMultiplier;
     }
 
-    public void SetDirection(Vector2 dir)
-    {
-        moveDir = dir.normalized;
-    }
-
+    public void SetDirection(Vector2 dir) => moveDir = dir.normalized;
     public void SetPlayer(PlayerMovement p)
     {
         player = p;
         player.OnMovementChanged += HandlePlayerMove;
     }
-
-    public void SetSpawner(BulletSpawner s)
-    {
-        spawner = s;
-    }
-
-    public void SetCanSpawnNextRing(bool value)
-    {
-        canSpawnNextRing = value;
-    }
+    public void SetSpawner(BulletSpawner s) => spawner = s;
+    public void SetCanSpawnNextRing(bool value) => canSpawnNextRing = value;
 
     private void Update()
     {
         switch (state)
         {
             case BulletState.MovingIn:
-                transform.position += (Vector3)(moveDir * moveSpeedIn * Time.deltaTime);
+                transform.position +=
+                    (Vector3)(moveDir * moveSpeedIn * Time.deltaTime);
                 break;
 
             case BulletState.Frozen:
                 if (!isDetached && isPlayerMoving)
                 {
-                    transform.position += (Vector3)(moveDir * currentOutSpeed * Time.deltaTime);
+                    transform.position +=
+                        (Vector3)(moveDir * currentOutSpeed * Time.deltaTime);
                 }
                 break;
 
             case BulletState.MovingOut:
-                transform.position += (Vector3)(moveDir * currentOutSpeed * Time.deltaTime);
+                transform.position +=
+                    (Vector3)(moveDir * currentOutSpeed * Time.deltaTime);
                 break;
         }
     }
@@ -102,7 +90,6 @@ public class RingBullet : MonoBehaviour
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        // Safety check to prevent coroutine activation errors if the bullet is being deactivated/cleaned up
         if (!gameObject.activeInHierarchy) return;
 
         if (other.CompareTag("Ring"))
@@ -110,7 +97,6 @@ public class RingBullet : MonoBehaviour
             isDetached = true;
             state = BulletState.MovingOut;
 
-            // cuma 1 bullet yang trigger
             if (canSpawnNextRing && spawner != null)
             {
                 spawner.SpawnRing();
@@ -123,7 +109,6 @@ public class RingBullet : MonoBehaviour
     private IEnumerator Despawn()
     {
         yield return new WaitForSeconds(despawnDelay);
-
         Destroy(gameObject);
     }
 
@@ -133,5 +118,8 @@ public class RingBullet : MonoBehaviour
         {
             player.OnMovementChanged -= HandlePlayerMove;
         }
+
+        // Beritahu spawner agar list-nya tetap bersih
+        spawner?.UnregisterBullet(this);
     }
 }

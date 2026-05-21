@@ -54,7 +54,7 @@ MonoBehaviour:
   lockPlayerOnInteract: 1
   outlineRenderer: {fileID: 4243357254879947732}
   outlineColor: {r: 0, g: 0.7, b: 1, a: 1}
-  outlineSize: 1
+  outlineSize: 2
   onInteract:
     m_PersistentCalls:
       m_Calls: []

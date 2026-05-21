@@ -39,12 +39,11 @@ public class PlayerStatus : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        stability = maxStability;
     }
 
     private void Start()
     {
-        stability = maxStability;
-
         stabilitySlider.maxValue = maxStability;
 
         easeStabilitySlider.maxValue = maxStability;
@@ -151,6 +150,14 @@ public class PlayerStatus : MonoBehaviour
     {
         if (isDead)
         {
+            return;
+        }
+
+        PhaseLoopManager phaseManager = FindObjectOfType<PhaseLoopManager>();
+        if (phaseManager != null && PhaseLoopManager.GlobalState != GameState.Liminal)
+        {
+            stability = 30f;
+            phaseManager.StartManualTransition(GameState.Liminal);
             return;
         }
 

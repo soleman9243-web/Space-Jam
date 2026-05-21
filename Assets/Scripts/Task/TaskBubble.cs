@@ -136,6 +136,12 @@ public class TaskBubble : MonoBehaviour
 
         isVisible = true;
 
+        if (!gameObject.activeInHierarchy)
+        {
+            bubbleText.text = text;
+            return;
+        }
+
         bubbleRoot.SetActive(true);
 
         StopAllRunningCoroutines();

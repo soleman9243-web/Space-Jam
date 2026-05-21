@@ -44,6 +44,11 @@ public class PlayerMovement : MonoBehaviour
         {
             lastIsMoving = IsMoving;
             OnMovementChanged?.Invoke(IsMoving);
+
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetFootstep(IsMoving);
+            }
         }
 
         HandleFlip();
@@ -67,6 +72,11 @@ public class PlayerMovement : MonoBehaviour
         {
             lastIsMoving = false;
             OnMovementChanged?.Invoke(false);
+
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetFootstep(false);
+            }
         }
 
         UpdateAnimation();

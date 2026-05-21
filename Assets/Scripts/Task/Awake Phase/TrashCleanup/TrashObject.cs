@@ -10,7 +10,14 @@ public class TrashObject : MonoBehaviour
     {
         interact = GetComponent<InteractObject2D>();
 
-        interact.onInteract.AddListener(OnInteract);
+        if (interact != null)
+        {
+            interact.onInteract.AddListener(OnInteract);
+        }
+        else
+        {
+            Debug.LogWarning("[TrashObject] InteractObject2D tidak ditemukan di prefab Trash!");
+        }
     }
 
     public void Setup(TrashCleanupTask ownerTask)

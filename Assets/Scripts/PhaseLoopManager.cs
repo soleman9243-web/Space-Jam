@@ -86,12 +86,18 @@ public class PhaseLoopManager : MonoBehaviour
             return;
         }
 
+        // Jangan transition jika sedang dalam Intro Sequence
+        if (FindObjectOfType<IntroSequenceManager>() != null)
+        {
+            return;
+        }
+
         float stability =
             PlayerStatus.Instance != null
             ? PlayerStatus.Instance.stability
             : 100f;
 
-        if (stability <= 30f)
+        if (stability <= 30f && !isTransitioning)
         {
             PreviousState = CurrentState;
 
@@ -157,11 +163,16 @@ public class PhaseLoopManager : MonoBehaviour
         );
     }
 
+    private bool isTransitioning = false;
+
     public void StartManualTransition(
         GameState targetState,
         Transform wakeUpPosition = null
     )
     {
+        if (isTransitioning) return;
+        isTransitioning = true;
+
         Debug.Log(
             ">>> MANUAL TRANSITION REQUEST: " +
             targetState
@@ -201,6 +212,26 @@ public class PhaseLoopManager : MonoBehaviour
                     liminalRoomManager.EnterLiminal();
                 }
 
+                if (screenFader != null)
+                {
+                    float elapsed = 0f;
+
+                    while (elapsed < fadeDuration)
+                    {
+                        elapsed += Time.deltaTime;
+
+                        screenFader.alpha =
+                            1f - (elapsed / fadeDuration);
+
+                        yield return null;
+                    }
+
+                    screenFader.alpha = 0f;
+
+                    screenFader.blocksRaycasts = false;
+                }
+
+                isTransitioning = false;
                 yield break;
             }
             else
@@ -249,6 +280,27 @@ public class PhaseLoopManager : MonoBehaviour
         {
             Debug.LogWarning("PLAYER NOT FOUND");
         }
+
+        if (screenFader != null)
+        {
+            float elapsed = 0f;
+
+            while (elapsed < fadeDuration)
+            {
+                elapsed += Time.deltaTime;
+
+                screenFader.alpha =
+                    1f - (elapsed / fadeDuration);
+
+                yield return null;
+            }
+
+            screenFader.alpha = 0f;
+
+            screenFader.blocksRaycasts = false;
+        }
+
+        isTransitioning = false;
     }
 
     private IEnumerator InvokePhaseChangedNextFrame(
@@ -258,5 +310,22 @@ public class PhaseLoopManager : MonoBehaviour
         yield return null;
 
         OnPhaseChanged?.Invoke(state);
+
+        // Update BGM
+        if (AudioManager.Instance != null)
+        {
+            switch (state)
+            {
+                case GameState.Awake:
+                    AudioManager.Instance.PlayBGM(BGMType.Awake);
+                    break;
+                case GameState.Dream:
+                    AudioManager.Instance.PlayBGM(BGMType.Dream);
+                    break;
+                case GameState.Liminal:
+                    AudioManager.Instance.PlayBGM(BGMType.Liminal);
+                    break;
+            }
+        }
     }
 }

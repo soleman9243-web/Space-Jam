@@ -139,15 +139,20 @@ public class DistortionEffectController : MonoBehaviour
             glitchDistortionWeight = Mathf.MoveTowards(glitchDistortionWeight, 0f, Time.deltaTime * 2f);
         }
 
+        if (currentState == GameState.Liminal)
+        {
+            // Di Liminal, kita pakai efek yang konstan, tidak terlalu brutal (biar bisa main crossy road)
+            baseDistortionWeight = 0.2f;
+        }
         // 1. TIER 1: STABILITY <= 50% (Distorsi Keluar Jarang)
-        if (stability <= 50f && stability > 30f)
+        else if (stability <= 50f && stability > 30f)
         {
             baseDistortionWeight = 0.15f;
             glitchTimer += Time.deltaTime;
             if (glitchTimer >= nextGlitchInterval)
             {
                 glitchTimer = 0f;
-                nextGlitchInterval = Random.Range(2.5f, 5f);
+                nextGlitchInterval = 30f; // Sesuai request: setiap 30 detik sekali
                 TriggerGlitch(0.65f, 0.4f); // Glitch ditahan 0.4 detik agar sangat jelas terlihat
             }
         }
@@ -182,11 +187,7 @@ public class DistortionEffectController : MonoBehaviour
         }
         else
         {
-            if (currentState == GameState.Liminal)
-            {
-                baseDistortionWeight = 0.6f;
-            }
-            else if (currentState == GameState.Dream)
+            if (currentState == GameState.Dream)
             {
                 // ini yang bikin RGB ghosting aktif di dream
                 baseDistortionWeight = 0.25f;

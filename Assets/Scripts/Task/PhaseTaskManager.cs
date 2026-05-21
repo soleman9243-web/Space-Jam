@@ -29,6 +29,8 @@ public class PhaseTaskManager : MonoBehaviour
     {
         yield return null;
 
+        if (!enabled) yield break;
+
         lastState = phaseManager.CurrentState;
 
         if (phaseManager != null)
@@ -98,26 +100,38 @@ public class PhaseTaskManager : MonoBehaviour
         GameState state = phaseManager.CurrentState;
 
         // Reset semua task agar clean setiap switch phase
-        foreach (var task in awakeTasks)
+        if (awakeTasks != null)
         {
-            task.DeactivateTask();
-            task.ResetTask();
+            foreach (var task in awakeTasks)
+            {
+                if (task != null)
+                {
+                    task.DeactivateTask();
+                    task.ResetTask();
+                }
+            }
         }
 
-        foreach (var task in dreamTasks)
+        if (dreamTasks != null)
         {
-            task.DeactivateTask();
-            task.ResetTask();
+            foreach (var task in dreamTasks)
+            {
+                if (task != null)
+                {
+                    task.DeactivateTask();
+                    task.ResetTask();
+                }
+            }
         }
 
         // Assign task sesuai phase
-        if (state == GameState.Awake)
+        if (state == GameState.Awake && awakeTasks != null)
         {
-            currentTasks.AddRange(awakeTasks);
+            foreach (var t in awakeTasks) if (t != null) currentTasks.Add(t);
         }
-        else if (state == GameState.Dream)
+        else if (state == GameState.Dream && dreamTasks != null)
         {
-            currentTasks.AddRange(dreamTasks);
+            foreach (var t in dreamTasks) if (t != null) currentTasks.Add(t);
         }
 
         ShuffleTasks();
@@ -148,7 +162,32 @@ public class PhaseTaskManager : MonoBehaviour
 
         if (currentTasks.Count <= 0)
         {
-            LoopCurrentPhaseTasks();
+            // Jangan di-loop! Biarkan daftar kosong tanda fase ini udah "clear"
+            if (taskBubble != null)
+            {
+                taskBubble.ClearBubble();
+            }
+            if (objectiveText != null)
+            {
+                objectiveText.text = "";
+            }
+
+            // SKIP WAKTU KE FASE BERIKUTNYA AGAR TIDAK NUNGGU LAMA!
+            SpaceJam.Environment.DayNightCycle2D timeCycle = FindObjectOfType<SpaceJam.Environment.DayNightCycle2D>();
+            if (timeCycle != null && phaseManager != null)
+            {
+                if (phaseManager.CurrentState == GameState.Awake)
+                {
+                    Debug.Log("[PhaseTaskManager] Semua quest Siang selesai! Skip langsung ke Malam.");
+                    timeCycle.SetNight();
+                }
+                else if (phaseManager.CurrentState == GameState.Dream)
+                {
+                    Debug.Log("[PhaseTaskManager] Semua quest Malam selesai! Skip langsung ke Pagi.");
+                    timeCycle.SetMorning();
+                }
+            }
+
             return;
         }
 
@@ -159,31 +198,12 @@ public class PhaseTaskManager : MonoBehaviour
         ShowCurrentTaskBubble();
     }
 
-    private void LoopCurrentPhaseTasks()
+    public bool AreAllCurrentTasksCompleted()
     {
-        GameState state = phaseManager.CurrentState;
-
-        List<BaseTask> source =
-            state == GameState.Awake ? awakeTasks : dreamTasks;
-
-        foreach (var task in source)
-        {
-            task.DeactivateTask();
-            task.ResetTask();
-        }
-
-        currentTasks = new List<BaseTask>(source);
-
-        ShuffleTasks();
-
-        if (currentTasks.Count > 0)
-        {
-            currentTasks[0].ActivateTask();
-        }
-
-        // Bubble muncul lagi dengan task yang di-loop
-        ShowCurrentTaskBubble();
+        return currentTasks != null && currentTasks.Count == 0;
     }
+
+    // LoopCurrentPhaseTasks DIHAPUS agar quest tidak berulang tanpa akhir
 
     // =========================================================
     // FORCE ACTIVATE
@@ -216,7 +236,7 @@ public class PhaseTaskManager : MonoBehaviour
 
     /// <summary>
     /// Tampilkan bubble dengan task aktif saat ini.
-    /// Auto-show + typewriter dari awal — dipakai saat task baru di-assign.
+    /// Auto-show + typewriter dari awal ï¿½ dipakai saat task baru di-assign.
     /// </summary>
     private void ShowCurrentTaskBubble()
     {

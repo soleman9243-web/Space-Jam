@@ -246,6 +246,7 @@ namespace SpaceJam.Minigames
             GameObject candle = new GameObject($"Candle_{index}");
             candle.transform.SetParent(transform);
             candle.transform.position = position;
+            candle.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
 
             // === BADAN LILIN (coklat tua) ===
             GameObject body = new GameObject("Body");
